@@ -5,7 +5,7 @@ import { createDailyPriceCache } from "@/src/services/quotes/dailyPriceCache";
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import type { DailyPriceEntry, DailyPriceRequest } from "@/src/types";
 
-import { benchmarkGapText, DashboardBenchmark } from "../DashboardBenchmark";
+import { benchmarkGapText, benchmarkProgressText, DashboardBenchmark } from "../DashboardBenchmark";
 
 const now = new Date("2026-11-26T06:00:00Z");
 const summary: Extract<XirrSummary, { status: "rate" }> = {
@@ -50,6 +50,26 @@ describe("Dashboard benchmark (#765)", () => {
     const again = await render(<DashboardBenchmark cache={cache} loader={loader} summary={summary} />);
     expect(again.getByTestId("dashboard-benchmark-rate")).toHaveTextContent("+10.00% a year");
     expect(loader).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows which year is loading and how far the load has got", async () => {
+    const cache = createDailyPriceCache({ now: () => now, storage: createMemoryJsonStorage() });
+    let finish2026: () => void = () => undefined;
+    const loader = (request: DailyPriceRequest) => (request.from.startsWith("2026")
+      ? new Promise<DailyPriceEntry>((resolve) => { finish2026 = () => void navLoader(request).then(resolve); })
+      : navLoader(request));
+    const screen = await render(<DashboardBenchmark cache={cache} loader={loader} summary={summary} />);
+
+    expect(benchmarkProgressText(undefined)).toBe("Checking saved NAV history.");
+    await fireEvent.press(screen.getByTestId("dashboard-benchmark-compare"));
+    await waitFor(() => expect(screen.getByTestId("dashboard-benchmark-loading"))
+      .toHaveTextContent("Loading 2026 NAV history from AMFI, year 2 of 2"));
+    expect(screen.getByTestId("dashboard-benchmark-progress").props.accessibilityValue).toEqual({ max: 100, min: 0, now: 50 });
+    expect(screen.getByText("Each year is saved as it arrives, so the next comparison is quick.")).toBeTruthy();
+
+    finish2026();
+    await waitFor(() => expect(screen.getByTestId("dashboard-benchmark-rate")).toBeTruthy());
+    expect(screen.queryByTestId("dashboard-benchmark-progress")).toBeNull();
   });
 
   it("says why when AMFI fails, and offers to try again", async () => {

@@ -1,4 +1,5 @@
 import { createMemoryJsonStorage } from "@/src/services/storage";
+import { AssetHistoryError } from "@/src/services/quotes/assetHistoryProvider";
 import { benchmarkWindows, loadBenchmarkNav, readCachedBenchmarkNav } from "@/src/services/quotes/benchmarkNav";
 import { createDailyPriceCache } from "@/src/services/quotes/dailyPriceCache";
 import type { DailyPriceEntry, DailyPriceRequest } from "@/src/types";
@@ -48,9 +49,59 @@ describe("benchmark NAV windows (#765)", () => {
     expect(readCachedBenchmarkNav(cache, "2026-03-01", "2026-11-26", earlyIst)).toMatchObject({ status: "ready" });
   });
 
-  it("says AMFI could not be reached when a window fails", async () => {
+  it("names the year and the reason when a window fails", async () => {
     const cache = createDailyPriceCache({ now: () => now, storage: createMemoryJsonStorage() });
-    const result = await loadBenchmarkNav(cache, "2026-03-01", "2026-11-26", async () => { throw new Error("offline"); }, now);
-    expect(result).toEqual({ message: expect.stringContaining("couldn't be loaded from AMFI"), status: "failed" });
+    const offline = await loadBenchmarkNav(cache, "2026-03-01", "2026-11-26", async () => {
+      throw new AssetHistoryError("offline", "AMFI NAV history could not be reached.");
+    }, now);
+    expect(offline).toEqual({ message: "AMFI couldn't be reached while loading 2026. Check your connection.", status: "failed" });
+
+    const tooLarge = await loadBenchmarkNav(cache, "2026-03-01", "2026-11-26", async () => {
+      throw new AssetHistoryError("invalid-data", "AMFI NAV history response exceeded the safety limit.");
+    }, now);
+    expect(tooLarge).toEqual({
+      message: "The 2026 NAV history from AMFI couldn't be read: AMFI NAV history response exceeded the safety limit.",
+      status: "failed",
+    });
+  });
+
+  it("says a slow year timed out and that earlier years are kept for the retry", async () => {
+    jest.useFakeTimers({ now });
+    try {
+      const cache = createDailyPriceCache({ now: () => now, storage: createMemoryJsonStorage() });
+      const loader = jest.fn((request: DailyPriceRequest) => (request.from.startsWith("2025")
+        ? Promise.resolve(entryFor(request))
+        : new Promise<DailyPriceEntry>(() => undefined)));
+      const pending = loadBenchmarkNav(cache, "2025-06-01", "2026-11-26", loader, now);
+      await jest.advanceTimersByTimeAsync(90_000);
+
+      await expect(pending).resolves.toEqual({
+        message: "AMFI took too long to send the 2026 NAV history. Earlier years are saved, so trying again continues from 2026.",
+        status: "failed",
+      });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it("says when a year can't be saved on the phone", async () => {
+    const cache = { read: () => ({ status: "miss" as const }), refresh: async () => ({ status: "unavailable" as const }) };
+    const result = await loadBenchmarkNav(cache as never, "2026-03-01", "2026-11-26", async (request) => entryFor(request), now);
+    expect(result).toEqual({ message: "The 2026 NAV history couldn't be saved on this phone.", status: "failed" });
+  });
+
+  it("reports progress by year, counting only years that need a request", async () => {
+    const cache = createDailyPriceCache({ now: () => now, storage: createMemoryJsonStorage() });
+    // 2025 as a whole calendar year: its window starts a holiday gap before 7 Jan.
+    await loadBenchmarkNav(cache, "2025-01-07", "2025-12-31", async (request) => entryFor(request), now);
+    const progress: unknown[] = [];
+
+    await loadBenchmarkNav(cache, "2023-06-01", "2026-11-26", async (request) => entryFor(request), now, (value) => progress.push(value));
+
+    expect(progress).toEqual([
+      { fraction: 0, year: 2023, yearIndex: 0, years: 3 },
+      { fraction: 1 / 3, year: 2024, yearIndex: 1, years: 3 },
+      { fraction: 2 / 3, year: 2026, yearIndex: 2, years: 3 },
+    ]);
   });
 });

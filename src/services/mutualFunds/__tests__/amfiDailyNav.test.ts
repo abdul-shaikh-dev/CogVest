@@ -2,7 +2,6 @@ import { AssetHistoryError, fetchAssetHistory } from "@/src/services/quotes/asse
 import type { DailyPriceRequest } from "@/src/types";
 
 import {
-  amfiDailyNavChunks,
   amfiMonthlyChunks,
   buildAmfiDailyNavUrl,
   parseAmfiDailyNav,
@@ -79,18 +78,7 @@ describe("AMFI daily NAV history (#799)", () => {
     clearAmfiSchemeCatalogCacheForTests();
   });
 
-  it("splits a range into windows of at most three calendar months", () => {
-    expect(amfiDailyNavChunks("2025-11-23", "2026-11-23")).toEqual([
-      { from: "2025-11-23", to: "2026-01-31" },
-      { from: "2026-02-01", to: "2026-04-30" },
-      { from: "2026-05-01", to: "2026-07-31" },
-      { from: "2026-08-01", to: "2026-10-31" },
-      { from: "2026-11-01", to: "2026-11-23" },
-    ]);
-    expect(amfiDailyNavChunks("2026-11-01", "2026-11-23")).toEqual([{ from: "2026-11-01", to: "2026-11-23" }]);
-  });
-
-  it("splits a range at month boundaries for an oversized report", () => {
+  it("splits a range at calendar-month boundaries", () => {
     expect(amfiMonthlyChunks("2019-03-25", "2019-05-10")).toEqual([
       { from: "2019-03-25", to: "2019-03-31" },
       { from: "2019-04-01", to: "2019-04-30" },
@@ -98,23 +86,21 @@ describe("AMFI daily NAV history (#799)", () => {
     ]);
   });
 
-  it("reads a quarter month by month when its report exceeds the size limit", async () => {
-    // A large fund house's older quarters run past 6 million characters; single months fit.
-    const huge = textResponse("x".repeat(6_000_001));
-    const spansMonths = (url: string) => {
-      const params = new URL(url).searchParams;
-      return params.get("frmdt")!.slice(3) !== params.get("todt")!.slice(3);
-    };
-    const fetcher = amfiFetcher(() => 10, (url) => (url.includes("frmdt") && spansMonths(url) ? huge : undefined));
-    const entry = await fetchAssetHistory(request("2019-04-01", "2019-09-30"), undefined, fetcher, now);
+  it("asks AMFI for one calendar month at a time", async () => {
+    // A large fund house's pre-2022 quarter runs to about 9M characters, over the limit; a month stays near 3M.
+    const fetcher = amfiFetcher(() => 10);
+    const entry = await fetchAssetHistory(request("2019-03-25", "2019-12-31"), undefined, fetcher, now);
+    const ranges = fetcher.mock.calls.map(([url]) => url).filter((url) => url.includes("frmdt"))
+      .map((url) => [new URL(url).searchParams.get("frmdt"), new URL(url).searchParams.get("todt")]);
 
+    expect(ranges).toHaveLength(10);
+    expect(ranges[0]).toEqual(["25-Mar-2019", "31-Mar-2019"]);
+    for (const [from, to] of ranges) expect(from!.slice(3)).toBe(to!.slice(3));
     expect(entry.complete).toBe(true);
-    expect(entry.points[0].date).toBe("2019-04-01");
-    expect(entry.points.at(-1)!.date).toBe("2019-09-30");
-    expect(entry.points).toHaveLength(weekdays("2019-04-01", "2019-09-30").length);
+    expect(entry.points).toHaveLength(weekdays("2019-03-25", "2019-12-31").length);
   });
 
-  it("fails when even one month is over the size limit", async () => {
+  it("fails when a month is over the size limit", async () => {
     const fetcher = amfiFetcher(() => 10, (url) => (url.includes("frmdt") ? textResponse("x".repeat(6_000_001)) : undefined));
     await expect(fetchAssetHistory(request("2019-04-01", "2019-06-30"), undefined, fetcher, now))
       .rejects.toMatchObject({ kind: "invalid-data" });
@@ -145,11 +131,11 @@ describe("AMFI daily NAV history (#799)", () => {
       .toThrow("AMFI did not return a NAV history report for this range.");
   });
 
-  it("fetches a year in chunks and returns a complete INR NAV series", async () => {
+  it("fetches a year month by month and returns a complete INR NAV series", async () => {
     const fetcher = amfiFetcher((date) => 20 + Number(date.slice(5, 7)) / 10);
     const entry = await fetchAssetHistory(request("2025-11-23", "2026-11-23"), undefined, fetcher, now);
     const reports = fetcher.mock.calls.map(([url]) => url).filter((url) => url.includes("DownloadNAVHistoryReport"));
-    expect(reports).toHaveLength(5);
+    expect(reports).toHaveLength(13);
     expect(entry).toMatchObject({ complete: true, currency: "INR", provider: "amfi", providerId: isin });
     expect(entry.points[0]).toEqual({ close: 21.1, date: "2025-11-24" });
     expect(entry.points.at(-1)).toEqual({ close: 21.1, date: "2026-11-23" });

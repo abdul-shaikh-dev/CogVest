@@ -9,23 +9,21 @@ import { lookupAmfiSchemeClassifications, parseAmfiNavDate } from "./amfiSchemeC
  * Daily NAV history for one fund from AMFI's NAV history report (#799).
  *
  * The report returns a whole fund house, and AMFI redirects any request whose
- * dates span more than about four calendar months, so a range is fetched in
- * chunks of at most three calendar months. A quarter of a large fund house's
- * older history can exceed the response limit; that quarter is then fetched
- * one month at a time.
+ * dates span more than about four calendar months. A range is fetched one
+ * calendar month at a time: a quarter of a large fund house's pre-2022 history
+ * runs to about 9M characters, over the response limit, while a month stays
+ * near 3M. Monthly reports also keep a phone's memory and data use per request
+ * low, and let callers show progress as each month arrives.
  */
 
 type Fetcher = (input: string, init?: RequestInit) => Promise<Response>;
 
 export class AmfiDailyNavError extends Error {
   readonly kind: "invalid-data" | "offline" | "provider-error" | "unsupported";
-  /** The report was larger than the safety limit; a shorter range may fit. */
-  readonly tooLarge: boolean;
 
-  constructor(kind: AmfiDailyNavError["kind"], message: string, tooLarge = false) {
+  constructor(kind: AmfiDailyNavError["kind"], message: string) {
     super(message);
     this.kind = kind;
-    this.tooLarge = tooLarge;
     this.name = "AmfiDailyNavError";
   }
 }
@@ -55,20 +53,6 @@ function addDays(date: string, days: number) {
 function amfiDate(date: string) {
   const value = utcDate(date);
   return `${String(value.getUTCDate()).padStart(2, "0")}-${monthNames[value.getUTCMonth()]}-${value.getUTCFullYear()}`;
-}
-
-/** Splits [from, to] into windows that each touch at most three calendar months. */
-export function amfiDailyNavChunks(from: string, to: string) {
-  const chunks: Array<{ from: string; to: string }> = [];
-  let cursor = from;
-  while (cursor <= to) {
-    const start = utcDate(cursor);
-    const end = isoDate(new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 3, 0)));
-    const chunkTo = end < to ? end : to;
-    chunks.push({ from: cursor, to: chunkTo });
-    cursor = addDays(chunkTo, 1);
-  }
-  return chunks;
 }
 
 /** Splits [from, to] at calendar-month boundaries. */
@@ -144,36 +128,9 @@ async function fetchChunk(
   // expo/fetch can resolve a partial body once aborted.
   if (signal?.aborted) throw new AmfiDailyNavError("offline", "AMFI NAV history request was cancelled.");
   if (text.length > maxResponseCharacters) {
-    throw new AmfiDailyNavError("invalid-data", "AMFI NAV history response exceeded the safety limit.", true);
+    throw new AmfiDailyNavError("invalid-data", "AMFI NAV history response exceeded the safety limit.");
   }
   return text;
-}
-
-/**
- * Reads one chunk; when its report is over the size limit, reads it again one
- * month at a time and combines the months. A month that is still too large fails.
- */
-async function readChunk(
-  fetcher: Fetcher,
-  fundHouseId: string,
-  chunk: { from: string; to: string },
-  isin: string,
-  signal: AbortSignal | undefined,
-) {
-  try {
-    return parseAmfiDailyNav(await fetchChunk(fetcher, fundHouseId, chunk, signal), isin);
-  } catch (error) {
-    const months = amfiMonthlyChunks(chunk.from, chunk.to);
-    if (!(error instanceof AmfiDailyNavError) || !error.tooLarge || months.length < 2) throw error;
-    const navs = new Map<string, number>();
-    let conflicts = 0;
-    for (const month of months) {
-      const result = parseAmfiDailyNav(await fetchChunk(fetcher, fundHouseId, month, signal), isin);
-      conflicts += result.conflicts;
-      for (const [date, nav] of result.navs) if (date >= month.from && date <= month.to) navs.set(date, nav);
-    }
-    return { conflicts, navs };
-  }
 }
 
 async function mapLimited<T, R>(items: T[], limit: number, task: (item: T) => Promise<R>) {
@@ -218,8 +175,9 @@ export async function fetchAmfiDailyNav(
     throw new AmfiDailyNavError("unsupported", "AMFI does not publish NAV history for this fund house.");
   }
 
-  const chunks = amfiDailyNavChunks(request.from, request.to);
-  const parsed = await mapLimited(chunks, chunkConcurrency, (chunk) => readChunk(fetcher, fundHouseId, chunk, isin, signal));
+  const chunks = amfiMonthlyChunks(request.from, request.to);
+  const parsed = await mapLimited(chunks, chunkConcurrency, async (chunk) =>
+    parseAmfiDailyNav(await fetchChunk(fetcher, fundHouseId, chunk, signal), isin));
 
   let complete = true;
   let seenNav = false;

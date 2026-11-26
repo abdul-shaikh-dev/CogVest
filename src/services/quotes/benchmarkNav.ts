@@ -1,8 +1,11 @@
 import { benchmarkFund, benchmarkMaxNavGapDays, type NavPoint } from "@/src/domain/benchmarkXirr";
 import type { DailyPriceEntry, DailyPriceRequest } from "@/src/types";
 
-import { fetchAssetHistory } from "./assetHistoryProvider";
-import type { createDailyPriceCache } from "./dailyPriceCache";
+import { amfiMonthlyChunks } from "@/src/services/mutualFunds/amfiDailyNav";
+import { amfiHistoricalNavBaseUrl } from "@/src/services/mutualFunds/amfiHistoricalNav";
+
+import { AssetHistoryError, fetchAssetHistory } from "./assetHistoryProvider";
+import type { createDailyPriceCache, DailyPriceRefreshResult } from "./dailyPriceCache";
 
 /**
  * Daily NAV of the benchmark fund (#765) from AMFI, through the shared daily
@@ -68,33 +71,106 @@ export function readCachedBenchmarkNav(cache: Cache, from: string, to: string, n
   return { points: merge(entries), status: "ready" };
 }
 
-/** Loads every window, fetching only those not cached (and the current one when a day old). */
+/**
+ * How far the load has got, over the years that need a request (cached years
+ * don't count). `fraction` also moves within a year as AMFI's monthly reports
+ * arrive, when the default loader is used.
+ */
+export type BenchmarkNavProgress = { fraction: number; year: number; yearIndex: number; years: number };
+
+type Fetcher = (input: string, init?: RequestInit) => Promise<Response>;
+
+/** Counts each AMFI monthly report once its body has been read. */
+function countingFetcher(onReport: () => void): Fetcher {
+  return async (input, init) => {
+    const response = await fetch(input, init);
+    if (!input.startsWith(amfiHistoricalNavBaseUrl)) return response;
+    return {
+      ok: response.ok,
+      status: response.status,
+      text: async () => {
+        const text = await response.text();
+        onReport();
+        return text;
+      },
+    } as Response;
+  };
+}
+
+function failureMessage(result: DailyPriceRefreshResult, year: number, error: unknown, yearsSaved: number) {
+  const reason = result.status === "failed" ? result.reason : "unavailable";
+  const cause = reason === "timeout"
+    ? `AMFI took too long to send the ${year} NAV history.`
+    : reason === "failed" && error instanceof AssetHistoryError && error.kind === "offline"
+      ? `AMFI couldn't be reached while loading ${year}. Check your connection.`
+      : reason === "failed" && error instanceof Error
+        ? `The ${year} NAV history from AMFI couldn't be read: ${error.message}`
+        : reason === "mismatch"
+          ? `AMFI's ${year} NAV history didn't match what was asked for.`
+          : `The ${year} NAV history couldn't be saved on this phone.`;
+  return yearsSaved > 0 ? `${cause} Earlier years are saved, so trying again continues from ${year}.` : cause;
+}
+
+/**
+ * Loads every window, fetching only those not cached (and the current one when
+ * a day old). Each fetched year is stored as it arrives, so a retry after a
+ * failure continues from the first missing year. A failure names the year and
+ * why it failed.
+ */
 export async function loadBenchmarkNav(
   cache: Cache,
   from: string,
   to: string,
-  loader: Loader = fetchAssetHistory,
+  loader?: Loader,
   now = new Date(),
+  onProgress?: (progress: BenchmarkNavProgress) => void,
 ): Promise<BenchmarkNavResult> {
-  const entries: DailyPriceEntry[] = [];
-  for (const window of providerWindows(from, to, now)) {
+  const windows = providerWindows(from, to, now).map((window) => {
     const request = benchmarkRequest(window);
     const cached = cache.read(request);
-    if (cached.status === "hit" && cached.freshness === "current") {
-      entries.push(cached.entry);
+    return { cached: cached.status === "hit" && cached.freshness === "current" ? cached.entry : undefined, request };
+  });
+  const years = windows.filter((window) => !window.cached).length;
+  let yearIndex = 0;
+  let monthsDone = 0;
+  let monthsInYear = 1;
+  let year = 0;
+  const report = () => onProgress?.({
+    fraction: Math.min(1, (yearIndex + Math.min(monthsDone, monthsInYear) / monthsInYear) / Math.max(years, 1)),
+    year,
+    yearIndex,
+    years,
+  });
+  const base: Loader = loader ?? ((request, signal) =>
+    fetchAssetHistory(request, signal, countingFetcher(() => { monthsDone += 1; report(); })));
+  let lastError: unknown;
+  const tracked: Loader = async (request, signal) => {
+    try {
+      return await base(request, signal);
+    } catch (error) {
+      lastError = error;
+      throw error;
+    }
+  };
+
+  const entries: DailyPriceEntry[] = [];
+  for (const { cached, request } of windows) {
+    if (cached) {
+      entries.push(cached);
       continue;
     }
-    const result = await cache.refresh(request, loader);
+    year = Number(request.to.slice(0, 4));
+    monthsDone = 0;
+    monthsInYear = amfiMonthlyChunks(request.from, request.to).length;
+    lastError = undefined;
+    report();
+    const result = await cache.refresh(request, tracked);
     const entry = result.status === "refreshed" ? result.entry
       : result.status === "failed" ? result.entry
         : undefined;
-    if (!entry) {
-      const timedOut = result.status === "failed" && result.reason === "timeout";
-      return { message: timedOut
-        ? "AMFI took too long to answer. Try again later."
-        : "NAV history couldn't be loaded from AMFI. Check your connection and try again.", status: "failed" };
-    }
+    if (!entry) return { message: failureMessage(result, year, lastError, entries.length), status: "failed" };
     entries.push(entry);
+    yearIndex += 1;
   }
   return { points: merge(entries), status: "ready" };
 }

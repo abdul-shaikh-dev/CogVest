@@ -5,7 +5,12 @@ import { AppButton, AppText } from "@/src/components/common";
 import { benchmarkFund, benchmarkXirr, type BenchmarkXirr, type NavPoint } from "@/src/domain/benchmarkXirr";
 import { formatDate, formatPercentage } from "@/src/domain/formatters";
 import type { XirrSummary } from "@/src/domain/xirrSummary";
-import { loadBenchmarkNav, readCachedBenchmarkNav, type BenchmarkNavResult } from "@/src/services/quotes/benchmarkNav";
+import {
+  loadBenchmarkNav,
+  readCachedBenchmarkNav,
+  type BenchmarkNavProgress,
+  type BenchmarkNavResult,
+} from "@/src/services/quotes/benchmarkNav";
 import { createDailyPriceCache } from "@/src/services/quotes/dailyPriceCache";
 import type { MonthlySnapshot } from "@/src/types";
 
@@ -16,12 +21,19 @@ import { useStyles } from "./dashboardStyles";
 
 type RateSummary = Extract<XirrSummary, { status: "rate" }>;
 type Cache = Parameters<typeof readCachedBenchmarkNav>[0];
-type State = { status: "idle" } | { status: "loading" } | { status: "failed"; message: string } | { status: "done"; points: readonly NavPoint[]; result: BenchmarkXirr };
+type State = { status: "idle" } | { progress?: BenchmarkNavProgress; status: "loading" } | { status: "failed"; message: string } | { status: "done"; points: readonly NavPoint[]; result: BenchmarkXirr };
 
 function compute(summary: RateSummary, nav: BenchmarkNavResult): State {
   if (nav.status === "failed") return { message: nav.message, status: "failed" };
   if (nav.status === "missing") return { status: "idle" };
   return { points: nav.points, result: benchmarkXirr(summary.flows, summary.endDate, nav.points), status: "done" };
+}
+
+/** What is loading, by year; the bar shows the share done. */
+export function benchmarkProgressText(progress: BenchmarkNavProgress | undefined) {
+  if (!progress) return "Checking saved NAV history.";
+  const label = `Loading ${progress.year} NAV history from AMFI`;
+  return progress.years > 1 ? `${label}, year ${progress.yearIndex + 1} of ${progress.years}` : label;
 }
 
 /** Percentage points between two annual rates, written out so it never relies on colour. */
@@ -61,7 +73,9 @@ export function DashboardBenchmark({ cache: suppliedCache, loader, masked = fals
 
   function load() {
     setState({ key, value: { status: "loading" } });
-    void loadBenchmarkNav(cache, summary.startDate, summary.endDate, loader)
+    const onProgress = (progress: BenchmarkNavProgress) => setState((current) => (
+      current.key === key && current.value.status === "loading" ? { key, value: { progress, status: "loading" } } : current));
+    void loadBenchmarkNav(cache, summary.startDate, summary.endDate, loader, undefined, onProgress)
       .then((nav) => setState((current) => (current.key === key ? { key, value: compute(summary, nav) } : current)))
       .catch(() => setState((current) => (current.key === key
         ? { key, value: { message: "NAV history couldn't be loaded from AMFI. Try again.", status: "failed" } }
@@ -80,9 +94,24 @@ export function DashboardBenchmark({ cache: suppliedCache, loader, masked = fals
         </>
       ) : null}
       {value.status === "loading" ? (
-        <AppText accessibilityLiveRegion="polite" color="secondary" testID="dashboard-benchmark-loading" variant="caption">
-          Loading NAV history from AMFI. This can take a minute.
-        </AppText>
+        <>
+          <AppText accessibilityLiveRegion="polite" color="secondary" testID="dashboard-benchmark-loading" variant="caption">
+            {benchmarkProgressText(value.progress)}
+          </AppText>
+          <View
+            accessible
+            accessibilityLabel="NAV history loaded"
+            accessibilityRole="progressbar"
+            accessibilityValue={{ max: 100, min: 0, now: Math.round((value.progress?.fraction ?? 0) * 100) }}
+            style={styles.benchmarkProgressTrack}
+            testID="dashboard-benchmark-progress"
+          >
+            <View style={[styles.benchmarkProgressFill, { width: `${Math.max(2, Math.round((value.progress?.fraction ?? 0) * 100))}%` }]} />
+          </View>
+          <AppText color="secondary" variant="caption">
+            Each year is saved as it arrives, so the next comparison is quick.
+          </AppText>
+        </>
       ) : null}
       {value.status === "failed" || (value.status === "done" && value.result.status === "unavailable") ? (
         <>
