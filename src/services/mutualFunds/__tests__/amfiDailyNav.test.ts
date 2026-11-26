@@ -3,6 +3,7 @@ import type { DailyPriceRequest } from "@/src/types";
 
 import {
   amfiDailyNavChunks,
+  amfiMonthlyChunks,
   buildAmfiDailyNavUrl,
   parseAmfiDailyNav,
 } from "../amfiDailyNav";
@@ -87,6 +88,36 @@ describe("AMFI daily NAV history (#799)", () => {
       { from: "2026-11-01", to: "2026-11-23" },
     ]);
     expect(amfiDailyNavChunks("2026-11-01", "2026-11-23")).toEqual([{ from: "2026-11-01", to: "2026-11-23" }]);
+  });
+
+  it("splits a range at month boundaries for an oversized report", () => {
+    expect(amfiMonthlyChunks("2019-03-25", "2019-05-10")).toEqual([
+      { from: "2019-03-25", to: "2019-03-31" },
+      { from: "2019-04-01", to: "2019-04-30" },
+      { from: "2019-05-01", to: "2019-05-10" },
+    ]);
+  });
+
+  it("reads a quarter month by month when its report exceeds the size limit", async () => {
+    // A large fund house's older quarters run past 6 million characters; single months fit.
+    const huge = textResponse("x".repeat(6_000_001));
+    const spansMonths = (url: string) => {
+      const params = new URL(url).searchParams;
+      return params.get("frmdt")!.slice(3) !== params.get("todt")!.slice(3);
+    };
+    const fetcher = amfiFetcher(() => 10, (url) => (url.includes("frmdt") && spansMonths(url) ? huge : undefined));
+    const entry = await fetchAssetHistory(request("2019-04-01", "2019-09-30"), undefined, fetcher, now);
+
+    expect(entry.complete).toBe(true);
+    expect(entry.points[0].date).toBe("2019-04-01");
+    expect(entry.points.at(-1)!.date).toBe("2019-09-30");
+    expect(entry.points).toHaveLength(weekdays("2019-04-01", "2019-09-30").length);
+  });
+
+  it("fails when even one month is over the size limit", async () => {
+    const fetcher = amfiFetcher(() => 10, (url) => (url.includes("frmdt") ? textResponse("x".repeat(6_000_001)) : undefined));
+    await expect(fetchAssetHistory(request("2019-04-01", "2019-06-30"), undefined, fetcher, now))
+      .rejects.toMatchObject({ kind: "invalid-data" });
   });
 
   it("builds AMFI's report URL", () => {
