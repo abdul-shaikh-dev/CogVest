@@ -1,4 +1,5 @@
-import { benchmarkXirr, navOn } from "@/src/domain/benchmarkXirr";
+import { benchmarkValuesOn, benchmarkXirr, navOn, type NavPoint } from "@/src/domain/benchmarkXirr";
+import { decimal } from "@/src/domain/precision";
 import { calculateXirr } from "@/src/domain/xirr";
 import type { XirrFlow } from "@/src/domain/xirrInputs";
 
@@ -55,5 +56,48 @@ describe("benchmark XIRR (#765)", () => {
     const points = [{ close: 100, date: "2025-01-01" }, { close: 50, date: "2025-06-02" }, { close: 60, date: "2026-01-01" }];
     const result = benchmarkXirr([flow("2025-01-01", "-1000"), flow("2025-06-02", "800")], "2026-01-01", points);
     expect(result).toMatchObject({ reason: "units-below-zero", status: "unavailable" });
+  });
+
+  it("values a portfolio-sized history exactly as a flow-by-flow replay would, without rescanning NAV", () => {
+    // Seven years of weekday NAV, 480 flows and a month-end for each month, as on a real phone.
+    let seed = 7;
+    const random = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    const points: NavPoint[] = [];
+    for (let day = Date.parse("2019-03-25T00:00:00Z"); day <= Date.parse("2026-11-26T00:00:00Z"); day += 86_400_000) {
+      const date = new Date(day);
+      if (date.getUTCDay() !== 0 && date.getUTCDay() !== 6) points.push({ close: 60 + random() * 120, date: date.toISOString().slice(0, 10) });
+    }
+    const flows = Array.from({ length: 480 }, (_, index) => {
+      const date = new Date(Date.parse("2019-04-01T00:00:00Z") + Math.floor(random() * 2_780) * 86_400_000).toISOString().slice(0, 10);
+      return { ...flow(date, random() < 0.9 ? `-${Math.round(random() * 50_000)}` : `${Math.round(random() * 5_000)}`), id: `f${index}` };
+    });
+    const dates = Array.from({ length: 92 }, (_, index) => new Date(Date.UTC(2019, 3 + index, 0)).toISOString().slice(0, 10));
+
+    // Reference: replay every flow up to each date, looking each NAV up afresh.
+    const ordered = [...flows].sort((a, b) => a.date.localeCompare(b.date));
+    const expected = dates.map((date) => {
+      let units = decimal(0);
+      for (const item of ordered) {
+        if (item.date > date) break;
+        const nav = navOn(points, item.date);
+        if (!nav) return null;
+        units = units.minus(decimal(item.amountInr).dividedBy(nav.close));
+        if (units.lessThan(-1e-9)) return null;
+      }
+      const end = navOn(points, date);
+      return end ? units.times(end.close).toDecimalPlaces(2).toNumber() : null;
+    });
+
+    const started = Date.now();
+    const values = benchmarkValuesOn(flows, dates, points);
+    expect(Date.now() - started).toBeLessThan(500);
+    expect(values).toEqual(expected);
+    expect(values.filter((value) => value !== null).length).toBeGreaterThan(80);
+  });
+
+  it("keeps the first NAV when a date appears twice, and ignores unusable NAVs", () => {
+    const points = [{ close: 0, date: "2026-01-02" }, { close: 100, date: "2026-01-02" }, { close: 105, date: "2026-01-02" }];
+    expect(navOn(points, "2026-01-02")).toEqual({ close: 100, date: "2026-01-02" });
+    expect(navOn([{ close: Number.NaN, date: "2026-01-02" }], "2026-01-02")).toBeNull();
   });
 });
