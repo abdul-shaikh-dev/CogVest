@@ -33,6 +33,7 @@ import { isVisualQaSessionActive } from "@/src/testing/visualQaSeed";
 import { GoalsSection } from "@/src/features/goals/GoalsSection";
 
 import { EpfHistoryScope } from "./EpfHistoryScope";
+import { ProgressBenchmark } from "./ProgressBenchmark";
 import { MonthlyHistoryPanel } from "./MonthlyHistoryPanel";
 import { MonthPickerField } from "./ProgressChartRange";
 import { getProgressEmptyStateKind } from "./progressEmptyState";
@@ -238,6 +239,10 @@ export function ProgressScreen({
               minimal={isMinimalMode}
               showDetails={showDetails}
             />}
+
+            {hasInvalidSnapshot || !showDetails ? null : (
+              <ProgressBenchmark masked={progress.preferences.maskWealthValues} now={now} store={store} />
+            )}
 
           </>
         ) : progress.hasData ? (

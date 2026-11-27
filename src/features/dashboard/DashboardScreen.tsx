@@ -173,6 +173,7 @@ export function DashboardScreen({
         <DashboardPortfolioHero
           onReviewPayouts={onReviewPayouts}
           onConfirmPayouts={onConfirmPayouts}
+          onOpenProgress={onOpenProgress}
           onSetBasis={onSetBasis}
           adaptiveLayoutMode={adaptiveLayoutMode}
           currentDate={currentDate}

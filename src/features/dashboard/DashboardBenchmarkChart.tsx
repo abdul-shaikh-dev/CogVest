@@ -57,7 +57,7 @@ export function DashboardBenchmarkChart({ data, masked }: { data: ChartData; mas
   const money = (value: number) => (masked ? MASKED_INR_VALUE : formatINR(value));
 
   return (
-    <View style={styles.benchmarkChart} testID="dashboard-benchmark-chart">
+    <View style={styles.benchmarkChart} testID="progress-benchmark-chart">
       <View style={styles.benchmarkLegend}>
         <View style={styles.legendItem}>
           <View style={[styles.legendLine, { borderColor: getSeriesColor(colors, "Portfolio") }]} />
@@ -74,9 +74,9 @@ export function DashboardBenchmarkChart({ data, masked }: { data: ChartData; mas
       >
         <ProgressTrendPlot colors={plotColors} formatYLabel={formatYLabel} model={model} onInspect={setInspecting} />
       </View>
-      <View accessibilityLiveRegion="polite" style={styles.xirrLine} testID="dashboard-benchmark-readout">
+      <View accessibilityLiveRegion="polite" style={styles.xirrLine} testID="progress-benchmark-readout">
         <AppText color="secondary" variant="caption">{data.labels[index]}</AppText>
-        <AppText testID="dashboard-benchmark-readout-values" variant="caption">
+        <AppText testID="progress-benchmark-readout-values" variant="caption">
           {`Portfolio ${money(data.portfolio[index])} · Fund ${money(data.fund[index])}`}
         </AppText>
       </View>

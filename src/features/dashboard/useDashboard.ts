@@ -37,8 +37,9 @@ import {
 } from "@/src/services/quotes";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import type { XirrSummary } from "@/src/domain/xirrSummary";
-import { wholePortfolioScope, wholePortfolioXirrSummary, xirrNames } from "./portfolioXirr";
-import type { AllocationTargets, DisplayMode, Holding, MonthlySnapshot } from "@/src/types";
+import { wholePortfolioScope, xirrNames } from "./portfolioXirr";
+import { useWholePortfolioXirr } from "./useWholePortfolioXirr";
+import type { AllocationTargets, DisplayMode, Holding } from "@/src/types";
 import { formatLocalCalendarDate } from "@/src/domain/dates";
 import {
   calculatePpfPortfolioSummary,
@@ -70,8 +71,6 @@ export type DashboardState = {
   wholePortfolioXirr: XirrSummary;
   wholePortfolioXirrScope: string;
   xirrNames: Record<string, string>;
-  /** Stored month-end values, for the benchmark chart (#765). */
-  monthlySnapshots: readonly Pick<MonthlySnapshot, "month" | "portfolioValue">[];
   allocation: AllocationItem[];
   cashBalance: number;
   convictionReadiness: ConvictionReadiness;
@@ -120,20 +119,10 @@ export function useDashboard({
   } = useQuoteRefresh({ now, refreshQuotes, store });
   const asOf = formatLocalCalendarDate(now);
   const {
-    assets, cashEntries, distributionCoverage, distributions, epf, futuresAccounts, measurementBasis,
+    assets, cashEntries, epf, futuresAccounts,
     monthlySnapshots, openingPositions, ppfAccounts, ppfLedgerEntries, quoteCache, trades,
   } = snapshot;
-  // The solver is bounded but not free, so it reruns only when a record it reads or the day
-  // changes, not on a preference toggle (#663).
-  const wholePortfolioXirr = useMemo(
-    () => wholePortfolioXirrSummary({
-      assets, cashEntries, distributionCoverage, distributions, epf, futuresAccounts, measurementBasis,
-      monthlySnapshots, openingPositions, ppfAccounts, ppfLedgerEntries, quoteCache, trades,
-    }, now),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the calendar day (asOf), not the per-render Date.
-    [assets, cashEntries, distributionCoverage, distributions, epf, futuresAccounts, measurementBasis,
-      monthlySnapshots, openingPositions, ppfAccounts, ppfLedgerEntries, quoteCache, trades, asOf],
-  );
+  const wholePortfolioXirr = useWholePortfolioXirr(store, now);
   // Holdings, totals and allocations depend on the records and the calendar day only (#663).
   const derived = useMemo(() => {
     const currencyIssues = getPortfolioCurrencyIssues(assets, quoteCache);
@@ -227,7 +216,6 @@ export function useDashboard({
     wholePortfolioXirr,
     wholePortfolioXirrScope: wholePortfolioScope(snapshot, now),
     xirrNames: xirrNames(snapshot),
-    monthlySnapshots: snapshot.monthlySnapshots,
     ppfConfirmedBalance: derived.ppfConfirmedBalance,
     allocation: derived.allocation,
     allocationTargets: snapshot.preferences.allocationTargets,

@@ -45,10 +45,11 @@ export function benchmarkGapText(portfolioRate: number, benchmarkRate: number) {
 
 /**
  * Hypothetical comparison (#765): the same dated money in and out, invested
- * in a Nifty 50 index fund instead. NAV comes from AMFI only when asked, then
- * from the cache. Information, not advice.
+ * in a Nifty 50 index fund instead, with the chart against stored month-end
+ * values. Shown on Progress; the Dashboard shows a one-line summary. NAV comes
+ * from AMFI only when asked, then from the cache. Information, not advice.
  */
-export function DashboardBenchmark({ cache: suppliedCache, loader, masked = false, monthlySnapshots = [], summary }: {
+export function BenchmarkComparison({ cache: suppliedCache, loader, masked = false, monthlySnapshots = [], summary }: {
   cache?: Cache;
   loader?: Parameters<typeof loadBenchmarkNav>[3];
   masked?: boolean;
@@ -83,19 +84,18 @@ export function DashboardBenchmark({ cache: suppliedCache, loader, masked = fals
   }
 
   return (
-    <View style={styles.benchmark} testID="dashboard-benchmark">
-      <AppText weight="bold" variant="caption">Compared with a Nifty 50 index fund</AppText>
+    <View style={styles.benchmarkFull} testID="progress-benchmark">
       {value.status === "idle" ? (
         <>
           <AppText color="secondary" variant="caption">
             See what the same money in and out, on the same dates, would have earned in a Nifty 50 index fund.
           </AppText>
-          <AppButton onPress={load} testID="dashboard-benchmark-compare" title="Compare" variant="secondary" />
+          <AppButton onPress={load} testID="progress-benchmark-compare" title="Compare" variant="secondary" />
         </>
       ) : null}
       {value.status === "loading" ? (
         <>
-          <AppText accessibilityLiveRegion="polite" color="secondary" testID="dashboard-benchmark-loading" variant="caption">
+          <AppText accessibilityLiveRegion="polite" color="secondary" testID="progress-benchmark-loading" variant="caption">
             {benchmarkProgressText(value.progress)}
           </AppText>
           <View
@@ -104,7 +104,7 @@ export function DashboardBenchmark({ cache: suppliedCache, loader, masked = fals
             accessibilityRole="progressbar"
             accessibilityValue={{ max: 100, min: 0, now: Math.round((value.progress?.fraction ?? 0) * 100) }}
             style={styles.benchmarkProgressTrack}
-            testID="dashboard-benchmark-progress"
+            testID="progress-benchmark-progress"
           >
             <View style={[styles.benchmarkProgressFill, { width: `${Math.max(2, Math.round((value.progress?.fraction ?? 0) * 100))}%` }]} />
           </View>
@@ -115,30 +115,30 @@ export function DashboardBenchmark({ cache: suppliedCache, loader, masked = fals
       ) : null}
       {value.status === "failed" || (value.status === "done" && value.result.status === "unavailable") ? (
         <>
-          <AppText color="secondary" testID="dashboard-benchmark-unavailable" variant="caption">
+          <AppText color="secondary" testID="progress-benchmark-unavailable" variant="caption">
             {value.status === "failed" ? value.message : value.result.status === "unavailable" ? value.result.message : ""}
           </AppText>
-          <AppButton onPress={load} testID="dashboard-benchmark-retry" title="Try again" variant="secondary" />
+          <AppButton onPress={load} testID="progress-benchmark-retry" title="Try again" variant="secondary" />
         </>
       ) : null}
       {value.status === "done" && value.result.status === "rate" ? (
         <>
           <View style={styles.xirrLine}>
-            <AppText color="secondary" variant="caption">Nifty 50 index fund, same money</AppText>
-            <AppText testID="dashboard-benchmark-rate" variant="caption" weight="bold">
+            <AppText color="secondary" style={styles.xirrLabel} variant="caption">Nifty 50 index fund, same money</AppText>
+            <AppText testID="progress-benchmark-rate" variant="caption" weight="bold">
               {`${formatPercentage(value.result.rate * 100)} a year`}
             </AppText>
           </View>
-          <AppText testID="dashboard-benchmark-gap" variant="caption" weight="bold">
+          <AppText testID="progress-benchmark-gap" variant="caption" weight="bold">
             {`Your portfolio: ${benchmarkGapText(summary.rate, value.result.rate)}`}
           </AppText>
           {chart?.status === "chart" ? <DashboardBenchmarkChart data={chart} masked={masked} /> : null}
           {chart?.status === "few" ? (
-            <AppText color="secondary" testID="dashboard-benchmark-chart-few" variant="caption">
+            <AppText color="secondary" testID="progress-benchmark-chart-few" variant="caption">
               The chart appears once there are a few month-end snapshots in this period.
             </AppText>
           ) : null}
-          <AppText color="secondary" testID="dashboard-benchmark-note" variant="caption">
+          <AppText color="secondary" testID="progress-benchmark-note" variant="caption">
             {`Hypothetical. The same money in and out, on the same dates, in ${benchmarkFund.name}, at AMFI NAV to ${formatDate(value.result.navAsOf)}. Your portfolio includes Cash; the fund doesn't. Not advice.`}
           </AppText>
         </>
