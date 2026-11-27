@@ -59,6 +59,15 @@ describe("asset lookup service", () => {
     });
   });
 
+  it("takes an ETF's sector from its name or ticker (#823)", () => {
+    expect(mapYahooQuoteToLookupResult({ longname: "Nippon India ETF Nifty IT", quoteType: "ETF", symbol: "ITBEES.NS" }))
+      .toMatchObject({ assetClass: "etf", sectorType: "technology" });
+    expect(mapYahooQuoteToLookupResult({ quoteType: "ETF", shortname: "GOLDBEES", symbol: "GOLDBEES.NS" }))
+      .toMatchObject({ sectorType: "commodities" });
+    expect(mapYahooQuoteToLookupResult({ quoteType: "ETF", shortname: "Some Fund", symbol: "XYZETF.NS" }))
+      .toMatchObject({ sectorType: "diversified" });
+  });
+
   it("accepts only supported Yahoo quote types", () => {
     for (const quoteType of ["INDEX", "MUTUALFUND", "FUTURE", "OPTION"]) {
       expect(

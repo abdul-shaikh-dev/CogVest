@@ -17,3 +17,13 @@ export {
   normalizeIsin,
 } from "./identity";
 export type { CanonicalAssetMatcher } from "./identity";
+export {
+  isDefaultSector,
+  isFundLike,
+  looksLikeListedEtf,
+  suggestAssetClassification,
+  suggestFundSector,
+  suggestPortfolioClassifications,
+  withSuggestedFundSector,
+} from "./fundClassification";
+export type { AssetClassification, AssetClassificationSuggestion } from "./fundClassification";

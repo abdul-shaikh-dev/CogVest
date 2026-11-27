@@ -80,6 +80,7 @@ const defaultFlows = [
   "e2e/shared-ui-hierarchy.yaml",
   "e2e/workflow-exit-navigation.yaml",
   "e2e/savings-goals.yaml",
+  "e2e/sector-suggestions.yaml",
   "e2e/allocation-targets.yaml",
   "e2e/sip-templates.yaml",
   "e2e/benchmark-xirr.yaml",

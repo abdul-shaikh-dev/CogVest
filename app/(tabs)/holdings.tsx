@@ -49,6 +49,7 @@ export default function HoldingsScreen() {
       openAddMenu={params.openAddMenu === "true"}
       onAddMenuOpened={() => router.setParams({ openAddMenu: undefined })}
       onOpenDuration={() => router.push("/holding-duration")}
+      onReviewSectors={() => router.push("/sector-suggestions")}
       onOpenFutures={() => router.push("/futures")}
       onAddTrade={() => {
         router.push("/add-holding");

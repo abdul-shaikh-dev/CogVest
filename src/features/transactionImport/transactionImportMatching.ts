@@ -1,4 +1,4 @@
-import { findCanonicalAsset, normalizeAssetMetadata, normalizeIsin } from "@/src/domain/assets";
+import { findCanonicalAsset, normalizeAssetMetadata, normalizeIsin, suggestFundSector } from "@/src/domain/assets";
 import type { CasSchemeReview } from "@/src/domain/camsKfinCasNormalizer";
 import type { TransactionCsvCandidate } from "@/src/domain/transactionCsv";
 import type { Asset } from "@/src/types";
@@ -44,7 +44,7 @@ export function assetFromCasScheme(
       ? "liquidity"
       : allocation === "debt"
         ? "fixedIncome"
-        : "other",
+        : suggestFundSector({ name, symbol: isin, ticker: isin }) ?? "other",
     symbol: isin,
     ticker: isin,
   };

@@ -1,0 +1,67 @@
+appId: ${APP_ID}
+---
+# Adds a manually entered NSE holding with a manual price.
+# env: NAME, SYMBOL, TICKER, QUANTITY, COST, PRICE
+# A saved holding keeps Add Holding on its result; start the next one fresh.
+- runFlow:
+    when:
+      visible:
+        id: "add-another-holding-button"
+    commands:
+      - tapOn:
+          id: "add-another-holding-button"
+- runFlow:
+    when:
+      notVisible:
+        id: "add-holding-phase-asset"
+    commands:
+      - openLink: "${SCHEME}:///add-holding"
+- extendedWaitUntil:
+    visible:
+      id: "add-holding-phase-asset"
+    timeout: 30000
+- tapOn:
+    id: "toggle-manual-asset-entry"
+- tapOn:
+    id: "asset-input"
+- inputText: ${NAME}
+- tapOn:
+    id: "symbol-input"
+- inputText: ${SYMBOL}
+- tapOn:
+    id: "ticker-input"
+- inputText: ${TICKER}
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "quote-source-id-input"
+    direction: DOWN
+- tapOn:
+    id: "quote-source-id-input"
+- inputText: ${TICKER}
+- hideKeyboard
+- tapOn:
+    id: "continue-class-button"
+- tapOn:
+    id: "continue-position-button"
+- tapOn:
+    id: "quantity-input"
+- inputText: ${QUANTITY}
+- tapOn:
+    id: "average-cost-input"
+- inputText: ${COST}
+- tapOn:
+    id: "price-input"
+- inputText: ${PRICE}
+- hideKeyboard
+- tapOn:
+    id: "review-holding-button"
+- scrollUntilVisible:
+    element:
+      id: "save-holding-button"
+    direction: DOWN
+- tapOn:
+    id: "save-holding-button"
+    retryTapIfNoChange: true
+- assertVisible:
+    id: "holding-save-complete"
