@@ -38,6 +38,7 @@ type DashboardPortfolioHeroProps = {
   isMinimalMode: boolean;
   onReviewPayouts?: (assetId: string) => void;
   onConfirmPayouts?: () => void;
+  onOpenProgress?: () => void;
   onSetBasis?: () => void;
   pendingFuturesCount: number;
   setShowPerformance: Dispatch<SetStateAction<boolean>>;
@@ -59,6 +60,7 @@ export function DashboardPortfolioHero({
   isMinimalMode,
   onReviewPayouts,
   onConfirmPayouts,
+  onOpenProgress,
   onSetBasis,
   pendingFuturesCount,
   setShowPerformance,
@@ -194,9 +196,9 @@ export function DashboardPortfolioHero({
       {showPerformanceArea && showXirrDetails ? (
         <DashboardXirrDetails
           masked={dashboard.maskWealthValues}
-          monthlySnapshots={dashboard.monthlySnapshots}
           names={dashboard.xirrNames}
           onConfirmPayouts={onConfirmPayouts}
+          onOpenProgress={onOpenProgress}
           onReviewPayouts={onReviewPayouts}
           onSetBasis={onSetBasis}
           scope={dashboard.wholePortfolioXirrScope}

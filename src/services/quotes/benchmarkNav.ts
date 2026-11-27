@@ -172,5 +172,23 @@ export async function loadBenchmarkNav(
     entries.push(entry);
     yearIndex += 1;
   }
+  if (years > 0) {
+    loadedVersion += 1;
+    for (const listener of listeners) listener();
+  }
   return { points: merge(entries), status: "ready" };
+}
+
+// Progress loads NAV; the Dashboard summary only reads the cache, so it is told
+// when a load has stored new years.
+let loadedVersion = 0;
+const listeners = new Set<() => void>();
+
+export function subscribeBenchmarkNavLoads(listener: () => void) {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
+
+export function benchmarkNavLoadVersion() {
+  return loadedVersion;
 }
