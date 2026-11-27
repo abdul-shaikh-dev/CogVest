@@ -2,7 +2,20 @@ appId: ${APP_ID}
 ---
 # Adds a manually entered NSE holding with a manual price.
 # env: NAME, SYMBOL, TICKER, QUANTITY, COST, PRICE
-- openLink: "${SCHEME}:///add-holding"
+# A saved holding keeps Add Holding on its result; start the next one fresh.
+- runFlow:
+    when:
+      visible:
+        id: "add-another-holding-button"
+    commands:
+      - tapOn:
+          id: "add-another-holding-button"
+- runFlow:
+    when:
+      notVisible:
+        id: "add-holding-phase-asset"
+    commands:
+      - openLink: "${SCHEME}:///add-holding"
 - extendedWaitUntil:
     visible:
       id: "add-holding-phase-asset"

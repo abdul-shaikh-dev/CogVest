@@ -70,8 +70,14 @@ appId: ${APP_ID}
     id: "e2e-asset-itbees-ns-classification"
 # selector: stored e2e-evidence values are under test
 - assertVisible: "Classification: etf \\| etf \\| technology"
-- assertVisible: "Classification: stock \\| stock \\| other"
 - assertVisible: "Values: invested ₹400.00 \\| current ₹600.00 \\| quantity 10"
+# The bank's share is untouched.
+- scrollUntilVisible:
+    element:
+      id: "e2e-asset-bankbaroda-ns-classification"
+    direction: DOWN
+# selector: stored e2e-evidence values are under test
+- assertVisible: "Classification: stock \\| stock \\| other"
 - openLink: "${SCHEME}:///holdings"
 - scrollUntilVisible:
     element:
