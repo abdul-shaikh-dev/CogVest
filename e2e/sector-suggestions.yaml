@@ -1,0 +1,90 @@
+appId: ${APP_ID}
+---
+# #823: an exchange ETF saved as a company share gets an ETF and sector
+# suggestion from its name; a bank's share is never touched. The stored
+# records are asserted, not only the confirmation.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 120000
+- runFlow:
+    file: helpers/add-manual-listed-holding.yaml
+    env:
+      NAME: "Nippon India ETF Nifty IT"
+      SYMBOL: "ITBEES"
+      TICKER: "ITBEES.NS"
+      QUANTITY: "10"
+      COST: "40"
+      PRICE: "60"
+- runFlow:
+    file: helpers/add-manual-listed-holding.yaml
+    env:
+      NAME: "Bank of Baroda"
+      SYMBOL: "BANKBARODA"
+      TICKER: "BANKBARODA.NS"
+      QUANTITY: "2"
+      COST: "200"
+      PRICE: "200"
+- openLink: "${SCHEME}:///e2e-evidence?token=cogvest-local-visual-qa"
+- assertVisible:
+    id: "e2e-asset-itbees-ns-classification"
+# selector: stored e2e-evidence values are under test
+- assertVisible: "Classification: stock \\| stock \\| other"
+- openLink: "${SCHEME}:///holdings"
+- scrollUntilVisible:
+    element:
+      id: "holdings-insights-button"
+    direction: DOWN
+- tapOn:
+    id: "holdings-insights-button"
+- scrollUntilVisible:
+    element:
+      id: "holdings-sector-review"
+    direction: DOWN
+- assertVisible:
+    id: "holdings-sector-other"
+- assertNotVisible:
+    id: "holdings-sector-technology"
+- tapOn:
+    id: "holdings-sector-review"
+- extendedWaitUntil:
+    visible:
+      id: "sector-suggestions-screen"
+    timeout: 10000
+# selector: the suggestion text is under test
+- assertVisible: "Nippon India ETF Nifty IT"
+- assertVisible: "Sector: Unknown → Technology · Type: Stock → ETF"
+- assertNotVisible: "Bank of Baroda"
+- tapOn:
+    id: "sector-suggestions-apply"
+- assertVisible:
+    id: "sector-suggestions-done"
+- assertVisible: "1 holding updated"
+- takeScreenshot: .expo/ux-enlarged/sector-suggestions-applied
+- tapOn:
+    id: "sector-suggestions-close"
+- openLink: "${SCHEME}:///e2e-evidence?token=cogvest-local-visual-qa"
+- assertVisible:
+    id: "e2e-asset-itbees-ns-classification"
+# selector: stored e2e-evidence values are under test
+- assertVisible: "Classification: etf \\| etf \\| technology"
+- assertVisible: "Classification: stock \\| stock \\| other"
+- assertVisible: "Values: invested ₹400.00 \\| current ₹600.00 \\| quantity 10"
+- openLink: "${SCHEME}:///holdings"
+- scrollUntilVisible:
+    element:
+      id: "holdings-insights-button"
+    direction: DOWN
+- tapOn:
+    id: "holdings-insights-button"
+- scrollUntilVisible:
+    element:
+      id: "holdings-sector-technology"
+    direction: DOWN
+- assertVisible:
+    id: "holdings-sector-technology-pct"
+- assertNotVisible:
+    id: "holdings-sector-review"
+- takeScreenshot: .expo/ux-enlarged/sector-breakdown

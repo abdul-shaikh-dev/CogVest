@@ -1,4 +1,4 @@
-import { findCanonicalAsset, normalizeAssetMetadata } from "@/src/domain/assets";
+import { findCanonicalAsset, normalizeAssetMetadata, withSuggestedFundSector } from "@/src/domain/assets";
 import {
   calculateCashBalance,
   calculateConsolidatedHoldingRows,
@@ -93,7 +93,7 @@ export function buildManualAssetFromCsvRow(
     return undefined;
   }
 
-  return normalizeAssetMetadata({
+  const asset = normalizeAssetMetadata({
     assetClass: row.assetClass,
     currency: row.currency,
     ...(exchange ? { exchange } : {}),
@@ -105,6 +105,8 @@ export function buildManualAssetFromCsvRow(
     symbol: symbol.toUpperCase(),
     ticker,
   });
+  // A sector the file gives is kept; otherwise a fund's name can state it (#823).
+  return row.sectorType ? asset : withSuggestedFundSector(asset);
 }
 
 function findExistingAssetForRow(

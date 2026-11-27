@@ -124,6 +124,8 @@ export type PortfolioStoreState = RawPortfolioSnapshot & {
   clearHistoricalQuoteCache: () => void;
   clearQuoteCache: () => void;
   correctAsset: (asset: Asset) => AssetCorrectionResult;
+  /** Applies confirmed sector and ETF suggestions (#823) in one write. */
+  applyAssetClassifications: (changes: AssetClassificationChange[]) => AssetClassificationResult;
   correctTrade: (trade: TradeCorrectionInput) => TradeCorrectionResult;
   correctOpeningPosition: (
     openingPosition: OpeningPosition,
@@ -358,6 +360,18 @@ export type AssetCorrectionResult =
       reason: "duplicateIdentity" | "invalidAsset" | "linkedEpf" | "linkedPayout" | "linkedPpf" | "notFound";
       status: "rejected";
     };
+
+/** Only the sector, the instrument type, and a share-to-ETF class move can change here. */
+export type AssetClassificationChange = {
+  assetClass: Asset["assetClass"];
+  assetId: string;
+  instrumentType?: Asset["instrumentType"];
+  sectorType?: Asset["sectorType"];
+};
+
+export type AssetClassificationResult =
+  | { applied: number; status: "applied" }
+  | { assetId: string; reason: "invalidChange" | "linkedEpf" | "linkedPayout" | "linkedRecord" | "notFound"; status: "rejected" };
 
 export type AssetDeletionImpact = {
   automaticSnapshots: number;

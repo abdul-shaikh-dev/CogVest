@@ -331,6 +331,7 @@ function RootContents() {
               <Stack.Screen name="trade" options={{ headerShown: false }} />
               <Stack.Screen name="insight" options={{ headerShown: false }} />
               <Stack.Screen name="holding-duration" options={{ headerShown: false }} />
+              <Stack.Screen name="sector-suggestions" options={{ headerShown: false }} />
               <Stack.Screen name="manage-assets" options={{ headerShown: false }} />
               <Stack.Screen name="asset" options={{ headerShown: false }} />
               <Stack.Screen name="sell-redeem" options={{ headerShown: false }} />

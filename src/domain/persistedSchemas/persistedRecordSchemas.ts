@@ -146,6 +146,7 @@ export const assetSchema = z.object({
   quoteSourceId: nonEmptyStringSchema.optional(),
   sectorType: z
     .enum([
+      "commodities",
       "consumer",
       "communicationServices",
       "digitalAsset",

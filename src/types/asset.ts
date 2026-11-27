@@ -22,6 +22,8 @@ export type InstrumentType =
   | "stock";
 
 export type SectorType =
+  /** Gold and silver funds and ETFs (#823). */
+  | "commodities"
   | "communicationServices"
   | "consumer"
   | "digitalAsset"

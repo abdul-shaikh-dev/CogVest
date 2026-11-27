@@ -47,6 +47,7 @@ import {
   type HoldingFilter,
   type HoldingReviewItem,
 } from "./holdingsReview";
+import { getSectorRows, reviewableSuggestions } from "./holdingsSectors";
 import { useStyles } from "./holdingsStyles";
 import {
   getFilterCounts,
@@ -64,6 +65,7 @@ type HoldingsScreenProps = {
   openAddMenu?: boolean;
   onAddMenuOpened?: () => void;
   onOpenDuration?: () => void;
+  onReviewSectors?: () => void;
   now?: Date;
   onAddTrade?: () => void;
   onRecordPurchase?: (assetId?: string) => void;
@@ -95,6 +97,7 @@ export function HoldingsScreen({
   openAddMenu,
   onAddMenuOpened,
   onOpenDuration,
+  onReviewSectors,
   now,
   onAddTrade,
   onRecordPurchase,
@@ -195,6 +198,7 @@ export function HoldingsScreen({
   const distributions = useSyncExternalStore(store.subscribe, () => store.getState().distributions, () => store.getState().distributions);
   const distributionCoverage = useSyncExternalStore(store.subscribe, () => store.getState().distributionCoverage,
     () => store.getState().distributionCoverage);
+  const ppfAccounts = useSyncExternalStore(store.subscribe, () => store.getState().ppfAccounts, () => store.getState().ppfAccounts);
   const epfState = useSyncExternalStore(store.subscribe, () => store.getState().epf, () => store.getState().epf);
   const epfAsOf = formatLocalCalendarDate(observedAt);
   const epfSummary = useMemo(() => summarizeEpfForReporting(epfState, epfAsOf), [epfState, epfAsOf]);
@@ -242,6 +246,8 @@ export function HoldingsScreen({
       ? undefined
       : summary.bestReturn;
   const exposureSegments = getExposureSegments(allocationItems);
+  const sectorRows = activePanel === "insights" ? getSectorRows(allocationItems.map((item) => item.holding)) : [];
+  const sectorSuggestionCount = activePanel === "insights" ? reviewableSuggestions(assets, ppfAccounts).length : 0;
   const filterCounts = getFilterCounts(marketReviewItems, allocationAvailable);
   const subtitle = getHoldingsSubtitle({
     epfAccounts: epfState.accounts.length,
@@ -558,6 +564,9 @@ export function HoldingsScreen({
               exposureSegments={exposureSegments}
               onClose={() => setActivePanel(undefined)}
               onOpenDuration={onOpenDuration}
+              onReviewSectors={onReviewSectors}
+              sectorRows={sectorRows}
+              sectorSuggestionCount={sectorSuggestionCount}
               summary={summary}
             />
           ) : null}

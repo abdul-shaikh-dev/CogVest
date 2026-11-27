@@ -1,6 +1,6 @@
 import { validateEpfLegacyLinks } from "@/src/domain/epf/legacyLinks";
 import { distributionGraphProblems } from "@/src/domain/distributions";
-import { normalizeAssetMetadata } from "@/src/domain/assets";
+import { getInstrumentTypeOptions, isSectorType, normalizeAssetMetadata } from "@/src/domain/assets";
 import { getV1AssetCurrencyIssue } from "@/src/domain/portfolioCurrency";
 
 import type { StoreContext } from "./storeContext";
@@ -23,6 +23,7 @@ import { hasNonnegativeCashTimeline } from "./tradeRules";
 
 type AssetActions = Pick<PortfolioStoreState,
   | "addAsset"
+  | "applyAssetClassifications"
   | "correctAsset"
   | "deleteAsset"
   | "removeAsset"
@@ -53,6 +54,50 @@ export function createAssetActions({ get, now, set, storage }: StoreContext): As
 
       persistPortfolioTransition(storage, state, { assets });
       set({ assets });
+    },
+    applyAssetClassifications: (changes) => {
+      const state = get();
+      const byId = new Map(state.assets.map((asset) => [asset.id, asset]));
+      const updated = new Map<string, (typeof state.assets)[number]>();
+      for (const change of changes) {
+        const existing = byId.get(change.assetId);
+        if (!existing) return { assetId: change.assetId, reason: "notFound", status: "rejected" };
+        const classMove = change.assetClass !== existing.assetClass;
+        if (classMove && !(existing.assetClass === "stock" && change.assetClass === "etf")) {
+          return { assetId: existing.id, reason: "invalidChange", status: "rejected" };
+        }
+        const instrumentType = change.instrumentType ?? existing.instrumentType;
+        if ((instrumentType && !getInstrumentTypeOptions(change.assetClass).includes(instrumentType)) ||
+            (change.sectorType !== undefined && !isSectorType(change.sectorType))) {
+          return { assetId: existing.id, reason: "invalidChange", status: "rejected" };
+        }
+        // Demerged and PPF-linked records keep their class; their history depends on it.
+        if (existing.demerger || state.assets.some((item) => item.demerger?.childAssetId === existing.id) ||
+            state.ppfAccounts.some((account) => account.legacyAssetId === existing.id)) {
+          return { assetId: existing.id, reason: "linkedRecord", status: "rejected" };
+        }
+        updated.set(existing.id, normalizeAssetMetadata({
+          ...existing,
+          assetClass: change.assetClass,
+          ...(instrumentType ? { instrumentType } : {}),
+          ...(change.sectorType ? { sectorType: change.sectorType } : {}),
+        }));
+      }
+      const assets = state.assets.map((asset) => updated.get(asset.id) ?? asset);
+      try {
+        validateEpfLegacyLinks(state.epf.accounts, assets);
+      } catch {
+        return { assetId: changes[0]?.assetId ?? "", reason: "linkedEpf", status: "rejected" };
+      }
+      if (distributionGraphProblems({ ...selectRawSnapshot(state), assets }).length > 0) {
+        return { assetId: changes[0]?.assetId ?? "", reason: "linkedPayout", status: "rejected" };
+      }
+      if (updated.size === 0) return { applied: 0, status: "applied" };
+      // Stocks and ETFs both count as equity and the quote identity is
+      // unchanged, so stored month-ends and quotes stay as they are.
+      persistPortfolioTransition(storage, state, { assets });
+      set({ assets });
+      return { applied: updated.size, status: "applied" };
     },
     correctAsset: (input) => {
       const state = get();

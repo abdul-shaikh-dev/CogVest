@@ -65,6 +65,8 @@ export {
   preferencesStorageKey,
   quoteCacheStorageKey,
   storageRecoveryKeyPrefix,
+  type AssetClassificationChange,
+  type AssetClassificationResult,
   type AssetCorrectionResult,
   type AssetDeletionImpact,
   type AssetDeletionResult,

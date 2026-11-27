@@ -1,6 +1,7 @@
 import {
   createCanonicalAssetMatcher,
   getDefaultAssetMetadata,
+  suggestFundSector,
 } from "@/src/domain/assets";
 import type {
   AssetClass,
@@ -182,7 +183,10 @@ export function mapYahooQuoteToLookupResult(
   const providerSector = isEtf
     ? undefined
     : mapYahooSectorToSectorType(quote.sector, quote.sectorDisp);
-  const sectorType = providerSector ?? defaults.sectorType;
+  // An ETF's name states what it holds (#823): "Nifty IT", "Gold BeES".
+  const sectorType = providerSector
+    ?? (isEtf ? suggestFundSector({ name: quote.longname ?? quote.shortname ?? "", symbol: ticker, ticker }) : undefined)
+    ?? defaults.sectorType;
   const sectorTypeConfidence = providerSector
     ? "provider"
     : isEtf

@@ -6,6 +6,8 @@ import { formatPercentage } from "@/src/domain/formatters";
 
 import type { ExposureSegment, HoldingReviewItem, getHoldingReviewSummary } from "./holdingsReview";
 import { ExposurePanel, InsightCard } from "./HoldingsInsights";
+import { SectorBreakdownCard } from "./SectorBreakdownCard";
+import type { SectorRow } from "./holdingsSectors";
 import { useStyles } from "./holdingsStyles";
 import type { getQuoteStatus } from "./holdingsViewModel";
 
@@ -285,6 +287,9 @@ export function PortfolioInsightsPanel({
   exposureSegments,
   onClose,
   onOpenDuration,
+  onReviewSectors,
+  sectorRows,
+  sectorSuggestionCount,
   summary,
 }: {
   allocationAvailable: boolean;
@@ -292,6 +297,9 @@ export function PortfolioInsightsPanel({
   exposureSegments: ExposureSegment[];
   onClose: () => void;
   onOpenDuration?: () => void;
+  onReviewSectors?: () => void;
+  sectorRows: SectorRow[];
+  sectorSuggestionCount: number;
   summary: ReturnType<typeof getHoldingReviewSummary>;
 }) {
   const styles = useStyles();
@@ -348,6 +356,15 @@ export function PortfolioInsightsPanel({
           </AppText>
         </PremiumCard>
       )}
+      <SectorBreakdownCard
+        available={allocationAvailable}
+        onReviewSuggestions={onReviewSectors ? () => {
+          onClose();
+          onReviewSectors();
+        } : undefined}
+        rows={sectorRows}
+        suggestionCount={sectorSuggestionCount}
+      />
       <PremiumCard style={styles.topThreeCard}>
         <AppText weight="bold">Top three concentration</AppText>
         <AppText color="secondary" variant="caption">

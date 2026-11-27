@@ -26,7 +26,8 @@ describe("Tradebook match suggestions", () => {
 
 describe("CAS scheme identities", () => {
   it.each([
-    ["Sample Equity Fund - Direct Growth", "stock", "mutualFund", "other"],
+    ["Sample Equity Fund - Direct Growth", "stock", "mutualFund", "diversified"],
+    ["Sample Nifty IT Index Fund - Direct Growth", "stock", "mutualFund", "technology"],
     ["Sample Liquid Fund - Direct Growth", "debt", "liquidFund", "liquidity"],
   ] as const)("creates a classified local holding for %s", (name, assetClass, instrumentType, sectorType) => {
     expect(assetFromCasScheme({

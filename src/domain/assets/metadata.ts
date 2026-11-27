@@ -30,6 +30,7 @@ export const sectorTypeOptions: SectorType[] = [
   "realEstate",
   "communicationServices",
   "diversified",
+  "commodities",
   "fixedIncome",
   "digitalAsset",
   "liquidity",
@@ -48,6 +49,7 @@ export const equitySectorTypeOptions: SectorType[] = [
   "realEstate",
   "communicationServices",
   "diversified",
+  "commodities",
 ];
 
 const instrumentTypesByClass: Record<
@@ -114,6 +116,7 @@ const instrumentTypeLabels: Record<InstrumentType, string> = {
 };
 
 const sectorTypeLabels: Record<SectorType, string> = {
+  commodities: "Commodities",
   communicationServices: "Communication Services",
   consumer: "Consumer",
   digitalAsset: "Digital Asset",

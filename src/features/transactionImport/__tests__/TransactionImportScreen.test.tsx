@@ -550,7 +550,7 @@ describe("TransactionImportScreen", () => {
         instrumentType: "mutualFund",
         isin: "INF000000001",
         name: "Sample Equity Fund - Direct Growth",
-        sectorType: "other",
+        sectorType: "diversified",
         symbol: "INF000000001",
         ticker: "INF000000001",
       }),
