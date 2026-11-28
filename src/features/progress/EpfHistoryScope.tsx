@@ -9,10 +9,14 @@ import { formatCompactINR, formatINR } from "@/src/domain/formatters";
 import type { PortfolioStoreState } from "@/src/store";
 import { spacing } from "@/src/theme";
 
+// Built once and reused: constructing an Intl formatter costs milliseconds on
+// Hermes, and a long history formats every month on each render (#851).
+let monthYearFormatter: Intl.DateTimeFormat | undefined;
+
 function formatMonth(month: string) {
   const [year, monthPart] = month.split("-").map(Number);
-  return new Intl.DateTimeFormat("en-IN", { month: "long", timeZone: "UTC", year: "numeric" })
-    .format(new Date(Date.UTC(year, monthPart - 1, 1)));
+  monthYearFormatter ??= new Intl.DateTimeFormat("en-IN", { month: "long", timeZone: "UTC", year: "numeric" });
+  return monthYearFormatter.format(new Date(Date.UTC(year, monthPart - 1, 1)));
 }
 
 const statusCopy: Record<EpfMonthValue["status"], string> = {

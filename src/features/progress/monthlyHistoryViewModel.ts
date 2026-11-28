@@ -9,19 +9,26 @@ function monthDate(month: string) {
   return new Date(Date.UTC(Number(year), Number(monthPart) - 1, 1));
 }
 
+// Built once and reused: constructing an Intl formatter costs milliseconds on
+// Hermes, and a long history formats every month on each render (#851).
+let monthYearFormatter: Intl.DateTimeFormat | undefined;
+let shortMonthFormatter: Intl.DateTimeFormat | undefined;
+
 export function formatMonth(month: string) {
-  return new Intl.DateTimeFormat("en-IN", {
+  monthYearFormatter ??= new Intl.DateTimeFormat("en-IN", {
     month: "long",
     timeZone: "UTC",
     year: "numeric",
-  }).format(monthDate(month));
+  });
+  return monthYearFormatter.format(monthDate(month));
 }
 
 export function formatShortMonth(month: string) {
-  return new Intl.DateTimeFormat("en-IN", {
+  shortMonthFormatter ??= new Intl.DateTimeFormat("en-IN", {
     month: "short",
     timeZone: "UTC",
-  }).format(monthDate(month));
+  });
+  return shortMonthFormatter.format(monthDate(month));
 }
 
 export function previousCalendarMonth(month: string) {

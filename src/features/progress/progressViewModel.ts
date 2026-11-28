@@ -10,31 +10,40 @@ import type { ProgressSnapshotAutomationStatus } from "./useProgress";
 // Pure view logic for the Progress screen: month labels, chart geometry,
 // series colours and snapshot status copy.
 
+// Built once and reused: constructing an Intl formatter costs milliseconds on
+// Hermes, and a long history formats every month on each render (#851).
+let localMonthYearFormatter: Intl.DateTimeFormat | undefined;
+let monthYearFormatter: Intl.DateTimeFormat | undefined;
+let shortMonthFormatter: Intl.DateTimeFormat | undefined;
+
 export function getMonthLabel(date = new Date()) {
-  return new Intl.DateTimeFormat("en-IN", {
+  localMonthYearFormatter ??= new Intl.DateTimeFormat("en-IN", {
     month: "long",
     year: "numeric",
-  }).format(date);
+  });
+  return localMonthYearFormatter.format(date);
 }
 
 export function formatMonth(month: string) {
   const [year, monthPart] = month.split("-");
   const monthIndex = Number(monthPart) - 1;
 
-  return new Intl.DateTimeFormat("en-IN", {
+  monthYearFormatter ??= new Intl.DateTimeFormat("en-IN", {
     month: "long",
     timeZone: "UTC",
     year: "numeric",
-  }).format(new Date(Date.UTC(Number(year), monthIndex, 1)));
+  });
+  return monthYearFormatter.format(new Date(Date.UTC(Number(year), monthIndex, 1)));
 }
 
 export function formatShortMonth(month: string) {
   const [year, monthPart] = month.split("-");
 
-  return new Intl.DateTimeFormat("en-IN", {
+  shortMonthFormatter ??= new Intl.DateTimeFormat("en-IN", {
     month: "short",
     timeZone: "UTC",
-  }).format(new Date(Date.UTC(Number(year), Number(monthPart) - 1, 1)));
+  });
+  return shortMonthFormatter.format(new Date(Date.UTC(Number(year), Number(monthPart) - 1, 1)));
 }
 
 export function formatSignedCompactINR(value: number) {

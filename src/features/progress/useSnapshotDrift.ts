@@ -8,6 +8,15 @@ import {
 } from "@/src/domain/calculations";
 import type { MonthlySnapshot } from "@/src/types";
 
+import {
+  cachedMonthDrift,
+  fingerprintDriftRecords,
+  fingerprintSavedMonth,
+  getDeviceSnapshotDriftCache,
+  type SnapshotDriftCache,
+  type SnapshotDriftCacheEntries,
+} from "./snapshotDriftCache";
+
 /** Work done per slice before yielding to the UI; one month can run past it. */
 const sliceMs = 12;
 const noDrift: ReadonlyMap<string, SnapshotRecordDrift> = new Map();
@@ -20,35 +29,66 @@ export type SnapshotDriftInput = SnapshotDriftCheckRecords & { monthlySnapshots:
  * phone, so the check runs in short slices between frames and never holds the
  * screen. The result arrives once every month is checked; until then the last
  * finished result stands. Pass a memoized input: a new one restarts the check.
+ *
+ * Even sliced, a full check keeps JavaScript busy for seconds on a phone, so
+ * each month's answer is kept on the device (#851) and reused while neither the
+ * records nor that saved month changed; usually no month needs checking again.
  */
-export function useSnapshotDrift(input: SnapshotDriftInput): ReadonlyMap<string, SnapshotRecordDrift> {
+export function useSnapshotDrift(
+  input: SnapshotDriftInput,
+  cache: SnapshotDriftCache = getDeviceSnapshotDriftCache(),
+): ReadonlyMap<string, SnapshotRecordDrift> {
   const [drift, setDrift] = useState(noDrift);
 
   useEffect(() => {
     const { monthlySnapshots, ...records } = input;
     const months = monthlySnapshots.filter(isDriftCheckedSnapshot);
-    const check = createSnapshotDriftCheck(records);
     const found = new Map<string, SnapshotRecordDrift>();
+    const check = createSnapshotDriftCheck(records);
+    let cached: SnapshotDriftCacheEntries | null = null;
+    let entries: SnapshotDriftCacheEntries | undefined;
+    let checkedCount = 0;
     let next = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let cancelled = false;
     const step = () => {
       if (cancelled) return;
-      const started = Date.now();
-      while (next < months.length && Date.now() - started < sliceMs) {
-        const month = check(months[next]);
-        next += 1;
-        if (month) found.set(month.month, month);
+      if (months.length === 0) {
+        setDrift(found);
+        return;
       }
-      if (next < months.length) timer = setTimeout(step, 0);
-      else setDrift(found);
+      const started = Date.now();
+      if (!entries) {
+        cached = cache.read();
+        entries = { months: {}, records: fingerprintDriftRecords(records) };
+      }
+      while (next < months.length && Date.now() - started < sliceMs) {
+        const saved = months[next];
+        next += 1;
+        const reused = cachedMonthDrift(cached, entries.records, saved);
+        let fields = reused?.fields ?? null;
+        if (!reused) {
+          fields = check(saved)?.fields ?? null;
+          checkedCount += 1;
+        }
+        entries.months[saved.month] = { fields, snapshot: fingerprintSavedMonth(saved) };
+        if (fields) found.set(saved.month, { fields, month: saved.month, saved });
+      }
+      if (next < months.length) {
+        timer = setTimeout(step, 0);
+        return;
+      }
+      // Rewrite only when something changed: a month checked again, or months added or removed.
+      const cachedMonths = cached === null ? -1 : Object.keys(cached.months).length;
+      if (checkedCount > 0 || cachedMonths !== months.length) cache.write(entries);
+      setDrift(found);
     };
     timer = setTimeout(step, 0);
     return () => {
       cancelled = true;
       if (timer !== undefined) clearTimeout(timer);
     };
-  }, [input]);
+  }, [cache, input]);
 
   // A month saved again since the last check (recalculated, reviewed or rebuilt)
   // drops out at once rather than waiting for the next check to finish.

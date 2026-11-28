@@ -75,14 +75,19 @@ export type MonthlyProgressChartData = {
   selectedRange: MonthlyChartRange;
 };
 
+// Built once and reused: constructing an Intl formatter costs milliseconds on
+// Hermes, and a long history formats every month on each render (#851).
+let shortMonthYearFormatter: Intl.DateTimeFormat | undefined;
+
 function formatShortMonth(month: string) {
   const [year, monthPart] = month.split("-");
 
-  return new Intl.DateTimeFormat("en-IN", {
+  shortMonthYearFormatter ??= new Intl.DateTimeFormat("en-IN", {
     month: "short",
     timeZone: "UTC",
     year: "numeric",
-  }).format(new Date(Date.UTC(Number(year), Number(monthPart) - 1, 1)));
+  });
+  return shortMonthYearFormatter.format(new Date(Date.UTC(Number(year), Number(monthPart) - 1, 1)));
 }
 
 function getRangeLimit(range: MonthlyChartRange) {
