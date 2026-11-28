@@ -40,9 +40,9 @@ describe("real-shaped synthetic portfolio (#843)", () => {
     expect(portfolio.ppfAccounts).toHaveLength(1);
     expect(portfolio.ppfLedgerEntries).toHaveLength(15);
     expect(portfolio.epf.accounts).toHaveLength(1);
-    // One generated snapshot per completed month, January 2019 to October 2026.
+    // One generated snapshot per completed month, December 2018 (the PPF checkpoint) to October 2026.
     expect(portfolio.monthlySnapshots.map((item) => item.month)).toEqual(
-      Array.from({ length: 94 }, (_, index) => monthAt(index)));
+      Array.from({ length: 95 }, (_, index) => monthAt(index - 1)));
     expect(JSON.stringify(fixture.payload)).not.toMatch(/Download|@/);
   });
 

@@ -232,6 +232,9 @@ function stockPrice(spec: StockSpec, month: number) {
   return syntheticPrice(spec.basePrice / factor, spec.annualRate, month);
 }
 
+/** December 2018: the PPF checkpoint is dated 31 December 2018, so the app expects that month too. */
+export const firstSnapshotMonth = -1;
+
 const mergerMonth = 41;
 
 function fundTrades(): Trade[] {
@@ -375,7 +378,7 @@ function currentQuotes(assets: Asset[], now: Date): QuoteCache {
 function historicalQuotes(lastMonth: number, now: Date): HistoricalQuoteCache {
   const fetchedAt = now.toISOString();
   const cache: HistoricalQuoteCache = {};
-  for (let month = 0; month <= lastMonth; month += 1) {
+  for (let month = firstSnapshotMonth; month <= lastMonth; month += 1) {
     const priceMonth = Math.min(month, lastMonthIndex);
     const asOfMonth = monthAt(month);
     for (const spec of realShapedFunds) {
@@ -462,7 +465,7 @@ export function createRealShapedFixture(now = new Date("2026-11-15T06:00:00.000Z
 
   const records = state().captureBackup().payload;
   const monthlySnapshots: MonthlySnapshot[] = [];
-  for (let month = 0; month <= lastMonth; month += 1) {
+  for (let month = firstSnapshotMonth; month <= lastMonth; month += 1) {
     const targetMonth = monthAt(month);
     const result = buildGeneratedMonthEndSnapshot({
       assets: records.portfolio.assets,

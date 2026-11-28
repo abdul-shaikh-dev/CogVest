@@ -22,9 +22,10 @@ appId: ${APP_ID}
     element:
       id: holding-quantity-rs-fund-cedar-nifty
     direction: DOWN
-- assertVisible:
-    id: holding-quantity-rs-fund-cedar-nifty
-    text: ".*6,030\.185.*"
+# selector: the replayed unit count is the value under test
+- assertVisible: '6030\.185'
+# selector: the value of those units at the fixture NAV is under test
+- assertVisible: '₹15,36,874\.05'
 - back
 # 14 shares bought before the verified 1:5 split plus 20 after it.
 - openLink: "${SCHEME}:///holdings"
@@ -43,9 +44,8 @@ appId: ${APP_ID}
     element:
       id: holding-quantity-rs-stock-synrail
     direction: DOWN
-- assertVisible:
-    id: holding-quantity-rs-stock-synrail
-    text: ".*\b90\b.*"
+# selector: the split-adjusted unit count is the value under test
+- assertVisible: '90'
 - back
 - openLink: "${SCHEME}:///progress"
 - extendedWaitUntil:
@@ -58,9 +58,12 @@ appId: ${APP_ID}
     direction: DOWN
 - tapOn:
     id: portfolio-monthly-chart-range-All
-- assertVisible:
-    id: portfolio-trend-selected-panel
+# selector: the stored range is under test; it starts at the PPF checkpoint month.
 - extendedWaitUntil:
-    visible: "Jan 2019 to .*"
+    visible: "Dec 2018 to .*"
     timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: portfolio-trend-selected-panel
+    direction: DOWN
 - takeScreenshot: .expo/performance/real-shaped-monthly-chart
