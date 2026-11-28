@@ -67,7 +67,9 @@ appId: ${APP_ID}
     element:
       id: e2e-asset-inf209k01yy7-classification
     direction: DOWN
-- assertVisible: "Classification: stock.*mutualFund.*other"
+# Since #841 a CAS import takes the sector from the scheme name and records why.
+- assertVisible: "Classification: stock.*mutualFund.*diversified"
+- assertVisible: "Sector basis: schemeName.*"
 - assertVisible: "Market: INR.*unset.*unset"
 - scrollUntilVisible:
     element:
