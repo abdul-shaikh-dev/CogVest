@@ -16,6 +16,7 @@ import {
   type SnapshotDriftCache,
   type SnapshotDriftCacheEntries,
 } from "./snapshotDriftCache";
+import { snapshotDriftTiming } from "./snapshotDriftTiming";
 
 /** Work done per slice before yielding to the UI; one month can run past it. */
 const sliceMs = 12;
@@ -34,10 +35,14 @@ export type SnapshotDriftInput = SnapshotDriftCheckRecords & { monthlySnapshots:
  * each month's answer is kept on the device (#851) and reused while neither the
  * records that month reads nor the saved month changed (#852). Usually no month
  * needs checking again, and a new record re-checks only months from its date.
+ * Months still to work out wait `checkDelayMs` first, so a re-check after an
+ * update, an import or a back-dated record never competes with opening the
+ * screen; months answered from the cache need no wait.
  */
 export function useSnapshotDrift(
   input: SnapshotDriftInput,
   cache: SnapshotDriftCache = getDeviceSnapshotDriftCache(),
+  checkDelayMs = snapshotDriftTiming.checkDelayMs,
 ): ReadonlyMap<string, SnapshotRecordDrift> {
   const [drift, setDrift] = useState(noDrift);
 
@@ -53,6 +58,7 @@ export function useSnapshotDrift(
     let next = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let cancelled = false;
+    const checkFrom = Date.now() + checkDelayMs;
     const step = () => {
       if (cancelled) return;
       if (months.length === 0) {
@@ -67,10 +73,14 @@ export function useSnapshotDrift(
       }
       while (next < months.length && Date.now() - started < sliceMs) {
         const saved = months[next];
-        next += 1;
         const recordsFingerprint = monthRecords(saved.month);
         const snapshotFingerprint = fingerprintSavedMonth(saved);
         const reused = cachedMonthDrift(cached, saved.month, recordsFingerprint, snapshotFingerprint);
+        if (!reused && Date.now() < checkFrom) {
+          timer = setTimeout(step, checkFrom - Date.now());
+          return;
+        }
+        next += 1;
         let fields = reused?.fields ?? null;
         if (!reused) {
           fields = check(saved)?.fields ?? null;
@@ -93,7 +103,7 @@ export function useSnapshotDrift(
       cancelled = true;
       if (timer !== undefined) clearTimeout(timer);
     };
-  }, [cache, input]);
+  }, [cache, checkDelayMs, input]);
 
   // A month saved again since the last check (recalculated, reviewed or rebuilt)
   // drops out at once rather than waiting for the next check to finish.

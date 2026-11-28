@@ -151,6 +151,12 @@ jest.mock("victory-native", () => {
   };
 });
 
+// The saved-month check waits a few seconds on a phone so it never competes
+// with opening Progress; tests of that wait pass their own delay.
+beforeEach(() => {
+  require("./src/features/progress/snapshotDriftTiming").snapshotDriftTiming.checkDelayMs = 0;
+});
+
 // Session memory deliberately outlives React remounts (#529); keep each test
 // independent of input an earlier test left behind.
 afterEach(() => {
