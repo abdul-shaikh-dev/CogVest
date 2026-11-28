@@ -47,7 +47,7 @@ import {
   type HoldingFilter,
   type HoldingReviewItem,
 } from "./holdingsReview";
-import { getSectorRows, reviewableSuggestions } from "./holdingsSectors";
+import { getSectorRows, reviewableSuggestions, unknownSectorAssets } from "./holdingsSectors";
 import { useStyles } from "./holdingsStyles";
 import {
   getFilterCounts,
@@ -247,7 +247,8 @@ export function HoldingsScreen({
       : summary.bestReturn;
   const exposureSegments = getExposureSegments(allocationItems);
   const sectorRows = activePanel === "insights" ? getSectorRows(allocationItems.map((item) => item.holding)) : [];
-  const sectorSuggestionCount = activePanel === "insights" ? reviewableSuggestions(assets, ppfAccounts).length : 0;
+  const sectorSuggestions = activePanel === "insights" ? reviewableSuggestions(assets, ppfAccounts) : [];
+  const sectorUnknownCount = activePanel === "insights" ? unknownSectorAssets(allocationHoldings, sectorSuggestions).length : 0;
   const filterCounts = getFilterCounts(marketReviewItems, allocationAvailable);
   const subtitle = getHoldingsSubtitle({
     epfAccounts: epfState.accounts.length,
@@ -566,7 +567,9 @@ export function HoldingsScreen({
               onOpenDuration={onOpenDuration}
               onReviewSectors={onReviewSectors}
               sectorRows={sectorRows}
-              sectorSuggestionCount={sectorSuggestionCount}
+              sectorSuggestionCount={sectorSuggestions.length}
+              sectorUnknownCount={sectorUnknownCount}
+              masked={maskWealthValues}
               summary={summary}
             />
           ) : null}

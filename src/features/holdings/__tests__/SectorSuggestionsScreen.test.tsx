@@ -2,9 +2,9 @@ import { act, fireEvent, render } from "@testing-library/react-native";
 
 import { createMemoryJsonStorage } from "@/src/services/storage";
 import { createPortfolioStore } from "@/src/store";
-import type { Asset, Holding } from "@/src/types";
+import type { Asset, BuyTrade, CashEntry, Holding } from "@/src/types";
 
-import { describeSuggestion, getSectorRows, reviewableSuggestions } from "../holdingsSectors";
+import { describeSuggestion, getSectorRows, reviewableSuggestions, unknownSectorAssets } from "../holdingsSectors";
 import { SectorBreakdownCard } from "../SectorBreakdownCard";
 import { SectorSuggestionsScreen } from "../SectorSuggestionsScreen";
 
@@ -20,6 +20,9 @@ const share: Asset = {
   assetClass: "stock", currency: "INR", exchange: "NSE", id: "bob", instrumentType: "stock",
   name: "Bank of Baroda", symbol: "BANKBARODA", ticker: "BANKBARODA.NS",
 };
+
+const deposit: CashEntry = { amount: 5000, date: "2026-01-01", id: "deposit", label: "Deposit", purpose: "capitalContribution", type: "addition" };
+const buyShare: BuyTrade = { assetId: "bob", date: "2026-01-05", id: "buy", pricePerUnit: 200, quantity: 2, totalValue: 400, type: "buy" };
 
 function store() {
   const portfolio = createPortfolioStore({ storage: createMemoryJsonStorage() });
@@ -37,10 +40,32 @@ describe("sector view model", () => {
       holding({ id: "b", sectorType: "technology" }, 300),
       holding({ id: "c", sectorType: "financialServices" }, 100),
     ])).toEqual([
-      { key: "technology", label: "Technology", percentage: 30 },
-      { key: "financialServices", label: "Financial Services", percentage: 10 },
-      { key: "other", label: "Unknown", percentage: 60 },
+      { key: "technology", label: "Technology", percentage: 30, value: 300 },
+      { key: "financialServices", label: "Financial Services", percentage: 10, value: 100 },
+      { key: "other", label: "Unknown", percentage: 60, value: 600 },
     ]);
+  });
+
+  it("gives no amounts when a holding is not priced in INR", () => {
+    const rows = getSectorRows([
+      holding({ id: "a", sectorType: "technology" }, 300),
+      holding({ currency: "USD", id: "b", sectorType: "technology" }, 100),
+    ]);
+    expect(rows).toEqual([{ key: "technology", label: "Technology", percentage: 100 }]);
+  });
+
+  it("lists Unknown holdings without a suggestion, once each, by name", () => {
+    const holdings = [
+      holding({ ...share, id: "bob", name: "Bank of Baroda" }, 100),
+      holding({ ...share, id: "bob", name: "Bank of Baroda" }, 50),
+      holding({ ...share, id: "acme", name: "Acme Ltd", sectorType: undefined }, 100),
+      holding({ ...share, id: "set", name: "Set Ltd", sectorType: "energy" }, 100),
+      holding({ ...itEtf }, 100),
+      holding({ ...share, assetClass: "cash", id: "cash", name: "Cash fund" }, 100),
+      holding({ ...share, id: "ppf", instrumentType: "ppf", name: "Old PPF" }, 100),
+    ];
+    const suggestions = reviewableSuggestions([itEtf, share], []);
+    expect(unknownSectorAssets(holdings, suggestions).map((asset) => asset.id)).toEqual(["acme", "bob"]);
   });
 
   it("leaves PPF-linked and demerged records out of the review", () => {
@@ -63,19 +88,43 @@ describe("SectorBreakdownCard", () => {
     const screen = await render(
       <SectorBreakdownCard
         available
-        onReviewSuggestions={onReview}
-        rows={[{ key: "technology", label: "Technology", percentage: 40 }, { key: "other", label: "Unknown", percentage: 60 }]}
+        masked={false}
+        onReviewSectors={onReview}
+        rows={[{ key: "technology", label: "Technology", percentage: 40, value: 4000 }, { key: "other", label: "Unknown", percentage: 60, value: 6000 }]}
         suggestionCount={2}
+        unknownCount={1}
       />,
     );
     expect(screen.getByTestId("holdings-sector-technology-pct").props.children).toEqual(["40", "%"]);
+    expect(screen.getByTestId("holdings-sector-technology-value").props.children).toBe("₹4,000.00");
+    expect(screen.getByLabelText("Technology 40 percent, ₹4,000.00")).toBeTruthy();
     expect(screen.getByText("Unknown")).toBeTruthy();
     fireEvent.press(screen.getByText("Review 2 sector suggestions"));
     expect(onReview).toHaveBeenCalled();
   });
 
+  it("masks the amounts like every other value", async () => {
+    const screen = await render(
+      <SectorBreakdownCard available masked rows={[{ key: "technology", label: "Technology", percentage: 100, value: 4000 }]} suggestionCount={0} unknownCount={0} />,
+    );
+    expect(screen.queryByText("₹4,000.00")).toBeNull();
+    expect(screen.getByLabelText("Technology 100 percent, Amount hidden")).toBeTruthy();
+    expect(screen.queryByTestId("holdings-sector-review")).toBeNull();
+  });
+
+  it("offers to set sectors when Unknown holdings have no suggestion, and says when amounts are left out", async () => {
+    const onReview = jest.fn();
+    const screen = await render(
+      <SectorBreakdownCard available masked={false} onReviewSectors={onReview} rows={[{ key: "other", label: "Unknown", percentage: 100 }]} suggestionCount={0} unknownCount={2} />,
+    );
+    expect(screen.queryByTestId("holdings-sector-other-value")).toBeNull();
+    expect(screen.getByText("Amounts are hidden because some holdings aren't priced in INR.")).toBeTruthy();
+    fireEvent.press(screen.getByText("Set sectors for 2 Unknown holdings"));
+    expect(onReview).toHaveBeenCalled();
+  });
+
   it("says why the breakdown is unavailable", async () => {
-    const screen = await render(<SectorBreakdownCard available={false} rows={[]} suggestionCount={0} />);
+    const screen = await render(<SectorBreakdownCard available={false} masked={false} rows={[]} suggestionCount={0} unknownCount={0} />);
     expect(screen.getByText("Unavailable until every market holding has a price.")).toBeTruthy();
     expect(screen.queryByTestId("holdings-sector-review")).toBeNull();
   });
@@ -100,10 +149,29 @@ describe("SectorSuggestionsScreen", () => {
     expect(assets.find((asset) => asset.id === "bob")).toMatchObject({ assetClass: "stock", sectorType: "other" });
   });
 
-  it("says when there is nothing to suggest", async () => {
+  it("lists held Unknown holdings with no suggestion and drops one once its sector is set", async () => {
+    const portfolio = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    portfolio.getState().addAsset(share);
+    portfolio.getState().addCashEntry(deposit);
+    portfolio.getState().addTrade(buyShare);
+    const onEditAsset = jest.fn();
+    const screen = await render(<SectorSuggestionsScreen onClose={jest.fn()} onEditAsset={onEditAsset} store={portfolio} />);
+    expect(screen.getByText("Bank of Baroda")).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("sector-unknown-bob"));
+    });
+    expect(onEditAsset).toHaveBeenCalledWith("bob");
+    await act(async () => {
+      portfolio.getState().applyAssetClassifications([{ assetClass: "stock", assetId: "bob", sectorType: "financialServices" }]);
+    });
+    expect(screen.queryByTestId("sector-unknown-bob")).toBeNull();
+    expect(screen.getByText("Nothing to set")).toBeTruthy();
+  });
+
+  it("says when there is nothing to set", async () => {
     const portfolio = createPortfolioStore({ storage: createMemoryJsonStorage() });
     portfolio.getState().addAsset(share);
     const screen = await render(<SectorSuggestionsScreen onClose={jest.fn()} store={portfolio} />);
-    expect(screen.getByText("Nothing to suggest")).toBeTruthy();
+    expect(screen.getByText("Nothing to set")).toBeTruthy();
   });
 });

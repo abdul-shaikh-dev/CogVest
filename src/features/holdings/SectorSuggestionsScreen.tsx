@@ -6,6 +6,7 @@ import {
   AppButton,
   AppText,
   EmptyState,
+  GroupedListRow,
   IconButton,
   PremiumCard,
   ScreenContainer,
@@ -16,17 +17,22 @@ import { usePortfolioFields } from "@/src/hooks";
 import { getPortfolioStore, type PortfolioStoreState } from "@/src/store";
 import { spacing } from "@/src/theme";
 
-import { describeSuggestion, reviewableSuggestions } from "./holdingsSectors";
+import { describeSuggestion, reviewableSuggestions, unknownSectorAssets } from "./holdingsSectors";
+import { useHoldings } from "./useHoldings";
 
 /**
  * Review of sector and ETF suggestions from fund names (#823). Nothing changes
  * until the user applies the ones left ticked; they are saved together.
+ * Holdings still in Unknown with no suggestion are listed below, each opening
+ * its edit screen, so the user can set the sector by hand.
  */
 export function SectorSuggestionsScreen({
   onClose,
+  onEditAsset,
   store = getPortfolioStore(),
 }: {
   onClose: () => void;
+  onEditAsset?: (assetId: string) => void;
   store?: StoreApi<PortfolioStoreState>;
 }) {
   const { applyAssetClassifications, assets, ppfAccounts } = usePortfolioFields(store, [
@@ -39,6 +45,30 @@ export function SectorSuggestionsScreen({
   const [skipped, setSkipped] = useState<Set<string>>(() => new Set());
   const [result, setResult] = useState<{ applied: number } | { error: string }>();
   const chosen = suggestions.filter((suggestion) => !skipped.has(suggestion.assetId));
+  // Live, unlike the suggestions, so a sector set by hand drops off on return.
+  const { holdings } = useHoldings({ store });
+  const liveSuggestions = useMemo(() => reviewableSuggestions(assets, ppfAccounts), [assets, ppfAccounts]);
+  const unknown = useMemo(() => unknownSectorAssets(holdings, liveSuggestions), [holdings, liveSuggestions]);
+  const unknownSection = unknown.length > 0 && onEditAsset ? (
+    <>
+      <AppText weight="bold">No suggestion</AppText>
+      <AppText color="secondary">
+        These holdings are still Unknown and their names don&apos;t state a sector. Open one to choose its sector.
+      </AppText>
+      <PremiumCard style={styles.card} testID="sector-unknown-list">
+        {unknown.map((asset) => (
+          <GroupedListRow
+            key={asset.id}
+            meta="Sector: Unknown"
+            onPress={() => onEditAsset(asset.id)}
+            showChevron
+            testID={`sector-unknown-${asset.id}`}
+            title={asset.name}
+          />
+        ))}
+      </PremiumCard>
+    </>
+  ) : null;
 
   function toggle(assetId: string) {
     setSkipped((current) => {
@@ -65,7 +95,7 @@ export function SectorSuggestionsScreen({
     <ScreenContainer scroll testID="sector-suggestions-screen">
       <View style={styles.content}>
         <ScreenHeader
-          title="Sector suggestions"
+          title="Sectors"
           leading={<IconButton accessibilityLabel="Back" icon="arrow-back" onPress={onClose} testID="sector-suggestions-back" />}
         />
         {result && "applied" in result ? (
@@ -77,10 +107,12 @@ export function SectorSuggestionsScreen({
             <AppButton onPress={onClose} testID="sector-suggestions-close" title="Done" />
           </PremiumCard>
         ) : suggestions.length === 0 ? (
-          <EmptyState
-            title="Nothing to suggest"
-            message="Every fund and ETF either has a sector or a name that doesn't state one."
-          />
+          unknownSection ? null : (
+            <EmptyState
+              title="Nothing to set"
+              message="Every holding has a sector."
+            />
+          )
         ) : (
           <>
             <AppText color="secondary">
@@ -110,6 +142,7 @@ export function SectorSuggestionsScreen({
             />
           </>
         )}
+        {unknownSection}
       </View>
     </ScreenContainer>
   );

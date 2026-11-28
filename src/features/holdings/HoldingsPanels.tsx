@@ -287,9 +287,11 @@ export function PortfolioInsightsPanel({
   exposureSegments,
   onClose,
   onOpenDuration,
+  masked,
   onReviewSectors,
   sectorRows,
   sectorSuggestionCount,
+  sectorUnknownCount,
   summary,
 }: {
   allocationAvailable: boolean;
@@ -297,9 +299,11 @@ export function PortfolioInsightsPanel({
   exposureSegments: ExposureSegment[];
   onClose: () => void;
   onOpenDuration?: () => void;
+  masked: boolean;
   onReviewSectors?: () => void;
   sectorRows: SectorRow[];
   sectorSuggestionCount: number;
+  sectorUnknownCount: number;
   summary: ReturnType<typeof getHoldingReviewSummary>;
 }) {
   const styles = useStyles();
@@ -358,12 +362,14 @@ export function PortfolioInsightsPanel({
       )}
       <SectorBreakdownCard
         available={allocationAvailable}
-        onReviewSuggestions={onReviewSectors ? () => {
+        masked={masked}
+        onReviewSectors={onReviewSectors ? () => {
           onClose();
           onReviewSectors();
         } : undefined}
         rows={sectorRows}
         suggestionCount={sectorSuggestionCount}
+        unknownCount={sectorUnknownCount}
       />
       <PremiumCard style={styles.topThreeCard}>
         <AppText weight="bold">Top three concentration</AppText>

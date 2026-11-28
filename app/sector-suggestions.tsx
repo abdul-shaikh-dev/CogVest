@@ -8,5 +8,10 @@ function close() {
 }
 export default function SectorSuggestionsRoute() {
   useFocusedBackHandler(close);
-  return <SectorSuggestionsScreen onClose={close} />;
+  return (
+    <SectorSuggestionsScreen
+      onClose={close}
+      onEditAsset={(assetId) => router.push({ pathname: "/asset", params: { assetId, returnTo: "sector-suggestions" } })}
+    />
+  );
 }

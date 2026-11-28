@@ -12,15 +12,42 @@ import type { Asset, Holding, PpfAccount, SectorType } from "@/src/types";
  * its own row, last, so missing sectors stay visible instead of being spread
  * over the others.
  */
-export type SectorRow = { key: SectorType; label: string; percentage: number };
+export type SectorRow = {
+  key: SectorType;
+  label: string;
+  percentage: number;
+  /** INR value, only when every holding is priced in INR; never summed across currencies. */
+  value?: number;
+};
 
 export function getSectorRows(holdings: Holding[]): SectorRow[] {
+  const allInr = holdings.every((holding) => holding.asset.currency === "INR");
   const rows = calculateSectorAllocation(holdings).map((item) => ({
     key: item.label as SectorType,
     label: sectorTypeLabel(item.label as SectorType),
     percentage: item.percentage,
+    ...(allInr ? { value: item.value } : {}),
   }));
   return [...rows.filter((row) => row.key !== "other"), ...rows.filter((row) => row.key === "other")];
+}
+
+/** The holdings the sector breakdown covers: market holdings, without cash and PPF. */
+export function sectorHoldings(holdings: Holding[]) {
+  return holdings.filter((holding) => holding.asset.instrumentType !== "ppf" && holding.asset.assetClass !== "cash");
+}
+
+/**
+ * Holdings still in Unknown that no name rule can place, so the user sets the
+ * sector by hand. One entry per asset, by name.
+ */
+export function unknownSectorAssets(holdings: Holding[], suggestions: Pick<AssetClassificationSuggestion, "assetId">[]) {
+  const suggested = new Set(suggestions.map((suggestion) => suggestion.assetId));
+  const assets = new Map<string, Asset>();
+  for (const holding of sectorHoldings(holdings)) {
+    const sector = holding.asset.sectorType ?? "other";
+    if (sector === "other" && !suggested.has(holding.asset.id)) assets.set(holding.asset.id, holding.asset);
+  }
+  return [...assets.values()].sort((left, right) => left.name.localeCompare(right.name) || left.id.localeCompare(right.id));
 }
 
 /** Suggestions the store can apply: PPF-linked and demerged records keep their class. */
