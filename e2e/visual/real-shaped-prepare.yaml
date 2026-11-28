@@ -1,0 +1,23 @@
+appId: ${APP_ID}
+---
+# #843: replaces the portfolio with the synthetic real-shaped fixture.
+# Disposable emulator or e2e package only.
+- openLink: "${SCHEME}:///scale-qa?token=cogvest-local-visual-qa"
+- extendedWaitUntil:
+    visible:
+      id: scale-qa-screen
+    timeout: 120000
+- scrollUntilVisible:
+    element:
+      id: scale-qa-seed-real-shaped
+    direction: DOWN
+- tapOn:
+    id: scale-qa-seed-real-shaped
+- tapOn: "Replace with real-shaped fixture"
+- extendedWaitUntil:
+    visible: "Portfolio restored"
+    timeout: 120000
+- tapOn:
+    id: backup-restore-done
+- assertVisible:
+    id: dashboard-screen

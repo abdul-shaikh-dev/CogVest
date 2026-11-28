@@ -1,0 +1,81 @@
+appId: ${APP_ID}
+---
+# #843: checks values the fixture fixes by construction, after restore and a restart.
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: dashboard-screen
+    timeout: 60000
+# The unlisted holding has no purchase date, so invested capital is unknown.
+- assertVisible:
+    id: dashboard-invested-context
+    text: ".*invested unknown.*"
+# The EPF checkpoint is a fixed ₹6,40,000; it does not depend on quotes.
+- scrollUntilVisible:
+    element:
+      id: dashboard-epf-value
+    direction: DOWN
+- assertVisible:
+    id: dashboard-epf-value
+    text: "₹6.4L"
+- openLink: "${SCHEME}:///holdings"
+- extendedWaitUntil:
+    visible:
+      id: holdings-screen
+    timeout: 30000
+# 94 monthly SIPs into the index fund; units are rounded per purchase.
+- tapOn:
+    id: holdings-search-input
+- inputText: "Cedar Nifty 50"
+- hideKeyboard
+- tapOn:
+    id: holding-row-rs-fund-cedar-nifty
+- scrollUntilVisible:
+    element:
+      id: holding-quantity-rs-fund-cedar-nifty
+    direction: DOWN
+# selector: the replayed unit count is the value under test
+- assertVisible: '6030\.185'
+# selector: the value of those units at the fixture NAV is under test
+- assertVisible: '₹15,36,874\.05'
+- back
+# 14 shares bought before the verified 1:5 split plus 20 after it.
+- openLink: "${SCHEME}:///holdings"
+- extendedWaitUntil:
+    visible:
+      id: holdings-screen
+    timeout: 30000
+- tapOn:
+    id: holdings-search-input
+- eraseText
+- inputText: "Synthetic Rail"
+- hideKeyboard
+- tapOn:
+    id: holding-row-rs-stock-synrail
+- scrollUntilVisible:
+    element:
+      id: holding-quantity-rs-stock-synrail
+    direction: DOWN
+# selector: the split-adjusted unit count is the value under test
+- assertVisible: '90'
+- back
+- openLink: "${SCHEME}:///progress"
+- extendedWaitUntil:
+    visible:
+      id: progress-screen
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: portfolio-monthly-chart-range-All
+    direction: DOWN
+- tapOn:
+    id: portfolio-monthly-chart-range-All
+# selector: the stored range is under test; it starts at the PPF checkpoint month.
+- extendedWaitUntil:
+    visible: "Dec 2018 to .*"
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: portfolio-trend-selected-panel
+    direction: DOWN
+- takeScreenshot: .expo/performance/real-shaped-monthly-chart
