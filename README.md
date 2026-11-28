@@ -11,8 +11,9 @@ analytics, or push notification dependency in V1.
 
 ## Current Phase
 
-V2 tracker #137 is complete. Current work follows V3 tracker #138 while preserving
-the verified V1/V2 baseline. Minimal Mode, investment-pattern insights, and
+V1, V2 (#137) and V3 (#138) are complete. Current work is stabilization
+(#846): verification, real-shaped fixtures and release safety ahead of new
+features. Minimal Mode, investment-pattern insights, and
 on-demand holding-duration guidance are available. Financial correctness,
 recoverability, and release safety still take priority. See `AGENTS.md` and
 `docs/cogvest-master-spec.md` for scope.

@@ -83,6 +83,27 @@ Included:
 - UI polish, animation, and performance hardening.
 - Optional Play Store submission automation.
 
+## Status (28 November 2026)
+
+V1, V2 (#137) and V3 (#138) are complete, and CogVest has replaced the Excel
+tracker. The V1–V3 lists above are kept as the original version boundaries. The
+spec's Active Version section lists what has shipped since.
+
+The current phase is stabilization (#846), which comes before any new version
+scope:
+
+- full Maestro tier runs;
+- real-shaped synthetic fixtures and a performance re-run (#843);
+- installing the real preview APK before publishing (#844).
+
+Parked until it is requested or unblocked:
+
+- #762 (USD→INR conversion);
+- #763 (fixed deposits, NPS, gold and bonds);
+- #247 (waits for a sample export);
+- #218 (application-layer encryption);
+- #529 and #737 (font-size relaunch bugs).
+
 ## Execution Tracking
 
 This roadmap defines version boundaries only. GitHub milestones and active
