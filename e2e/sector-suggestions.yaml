@@ -1,8 +1,10 @@
 appId: ${APP_ID}
 ---
 # #823: an exchange ETF saved as a company share gets an ETF and sector
-# suggestion from its name; a bank's share is never touched. The stored
-# records are asserted, not only the confirmation.
+# suggestion from its name; a bank's share is never touched by it. The
+# breakdown shows INR amounts, and the bank, left Unknown, gets its sector set
+# by hand from the shortcut. The stored records are asserted, not only the
+# confirmations.
 - launchApp:
     clearState: true
 - extendedWaitUntil:
@@ -91,6 +93,54 @@ appId: ${APP_ID}
     direction: DOWN
 - assertVisible:
     id: "holdings-sector-technology-pct"
-- assertNotVisible:
+# selector: the INR amounts and the shortcut wording are under test
+- assertVisible:
+    id: "holdings-sector-technology-value"
+    text: "₹600.00"
+- assertVisible:
+    id: "holdings-sector-other-value"
+    text: "₹400.00"
+- assertVisible:
     id: "holdings-sector-review"
+    text: "Set the sector of 1 Unknown holding"
 - takeScreenshot: .expo/ux-enlarged/sector-breakdown
+# The bank has no suggestion: set its sector by hand from the shortcut.
+- tapOn:
+    id: "holdings-sector-review"
+- extendedWaitUntil:
+    visible:
+      id: "sector-unknown-list"
+    timeout: 10000
+- tapOn:
+    id: "sector-unknown-.*"
+- extendedWaitUntil:
+    visible:
+      id: "review-asset-screen"
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: "asset-sector-picker"
+    direction: DOWN
+- tapOn:
+    id: "asset-sector-picker"
+- tapOn:
+    id: "asset-sector-financialServices"
+- scrollUntilVisible:
+    element:
+      id: "save-asset-correction-button"
+    direction: DOWN
+- tapOn:
+    id: "save-asset-correction-button"
+- extendedWaitUntil:
+    visible:
+      id: "sector-suggestions-screen"
+    timeout: 10000
+- assertNotVisible:
+    id: "sector-unknown-list"
+- openLink: "${SCHEME}:///e2e-evidence?token=cogvest-local-visual-qa"
+- scrollUntilVisible:
+    element:
+      id: "e2e-asset-bankbaroda-ns-classification"
+    direction: DOWN
+# selector: stored e2e-evidence values are under test
+- assertVisible: "Classification: stock \\| stock \\| financialServices"
