@@ -11,8 +11,8 @@ import { isMutualFundAsset } from "@/src/services/mutualFunds/amfiQuote";
 
 const yahooChartUrl = "https://query1.finance.yahoo.com/v8/finance/chart";
 const coinGeckoUrl = "https://api.coingecko.com/api/v3/coins";
-const maxResponseBytes = 4 * 1024 * 1024;
-const maxYahooRows = 4_000;
+export const assetHistoryMaxResponseBytes = 4 * 1024 * 1024;
+export const maxYahooRows = 4_000;
 const maxCoinGeckoRows = 50_000;
 
 export const cryptoDailyObservationNote =
@@ -198,7 +198,7 @@ function responseBodyIsTooLarge(response: Response) {
   const value = response.headers?.get("content-length");
   const contentLength = value ? Number(value) : 0;
 
-  return Number.isFinite(contentLength) && contentLength > maxResponseBytes;
+  return Number.isFinite(contentLength) && contentLength > assetHistoryMaxResponseBytes;
 }
 
 function throwForResponse(response: Response, provider: string) {
@@ -242,7 +242,7 @@ async function getPayload<T>(
   } catch {
     throw new AssetHistoryError("invalid-data", `${provider} historical response body could not be read.`);
   }
-  if (utf8ByteCount(body) > maxResponseBytes) {
+  if (utf8ByteCount(body) > assetHistoryMaxResponseBytes) {
     throw new AssetHistoryError("invalid-data", `${provider} historical response exceeded the safety limit.`);
   }
   try {

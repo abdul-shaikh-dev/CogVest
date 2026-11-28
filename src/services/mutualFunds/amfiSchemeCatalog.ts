@@ -9,6 +9,7 @@ import { getDefaultFetcher } from "@/src/services/quotes/utils";
 export const amfiNavCatalogUrl =
   "https://portal.amfiindia.com/spages/NAVAll.txt";
 export const AMFI_CATALOG_CACHE_MS = 15 * 60 * 1000;
+export const amfiCatalogTimeoutMs = 8_000;
 
 export type AmfiSchemeClassification = {
   allocation?: MutualFundAllocation;
@@ -128,7 +129,7 @@ async function loadCatalog(fetcher: QuoteFetcher) {
   if (!catalogRequest) {
     catalogRequest = (async () => {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8_000);
+      const timeout = setTimeout(() => controller.abort(), amfiCatalogTimeoutMs);
       try {
         const response = await fetcher(amfiNavCatalogUrl, {
           signal: controller.signal,

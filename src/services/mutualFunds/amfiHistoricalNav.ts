@@ -15,7 +15,8 @@ export const amfiNavDownloadPageUrl =
   "https://www.amfiindia.com/net-asset-value/nav-download";
 export const amfiHistoricalNavBaseUrl =
   "https://portal.amfiindia.com/DownloadNAVHistoryReport_Po.aspx";
-const maxAmfiResponseCharacters = 6_000_000;
+export const maxAmfiResponseCharacters = 6_000_000;
+export const amfiNavReportTimeoutMs = 10_000;
 
 const monthNames = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -94,7 +95,7 @@ const historyResponseCache = new Map<
 
 async function fetchText(fetcher: QuoteFetcher, url: string, label: string) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10_000);
+  const timeout = setTimeout(() => controller.abort(), amfiNavReportTimeoutMs);
   try {
     const response = await fetcher(url, { signal: controller.signal });
     if (!response.ok) {
