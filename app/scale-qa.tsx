@@ -5,6 +5,7 @@ import { AppButton, AppText, ScreenContainer } from "@/src/components/common";
 import { getPortfolioStore } from "@/src/store";
 import { createDailyPriceCache } from "@/src/services/quotes/dailyPriceCache";
 import { createAndroidScaleFixture } from "@/src/testing/androidScaleFixture";
+import { createRealShapedFixture } from "@/src/testing/realShapedFixture";
 import { canUseVisualQaHarness } from "@/src/testing/visualQaSeed";
 
 export default function ScaleQaRoute() {
@@ -31,10 +32,30 @@ export default function ScaleQaRoute() {
       } },
     ]);
   }
+  // #843: a long-held, fund-heavy synthetic portfolio built through the restore and account commands.
+  function seedRealShaped() {
+    Alert.alert("Replace synthetic test data?", "Only use this on a disposable emulator or test package. It replaces the portfolio and daily cache.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Replace with real-shaped fixture", style: "destructive", onPress: () => {
+        try {
+          const fixture = createRealShapedFixture(new Date());
+          const cache = createDailyPriceCache();
+          if (cache.clear().status !== "cleared") throw new Error("Cache unavailable");
+          for (const entry of fixture.dailyPriceEntries) {
+            if (cache.write(entry).status !== "stored") throw new Error("Cache write failed");
+          }
+          const state = getPortfolioStore().getState();
+          state.replaceFromBackup(fixture.payload, state.getBackupRevision());
+        } catch { setResult("Real-shaped fixture could not be installed."); }
+      } },
+    ]);
+  }
   return <ScreenContainer testID="scale-qa-screen">
     <AppText weight="bold">Synthetic Android scale QA</AppText>
     <AppText>250 assets, 1000 transactions, all completed months since 2019, ten daily histories with 3653 points each.</AppText>
     <AppButton title="Prepare scale fixture" testID="scale-qa-seed" onPress={seed} />
+    <AppText>Real-shaped: about 7 years of fund SIPs, stocks with a split, PPF, EPF and cash. Synthetic values only.</AppText>
+    <AppButton title="Prepare real-shaped fixture" testID="scale-qa-seed-real-shaped" onPress={seedRealShaped} />
     <AppText>{result}</AppText>
   </ScreenContainer>;
 }
