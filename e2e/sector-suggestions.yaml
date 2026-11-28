@@ -58,7 +58,18 @@ appId: ${APP_ID}
 # selector: the suggestion text is under test
 - assertVisible: "Nippon India ETF Nifty IT"
 - assertVisible: "Sector: Unknown → Technology · Type: Stock → ETF"
-- assertNotVisible: "Bank of Baroda"
+# The bank gets no suggestion: one change to apply, and it is listed under
+# No suggestion instead.
+- assertVisible:
+    id: "sector-suggestions-apply"
+    text: "Apply 1 change"
+- scrollUntilVisible:
+    element:
+      id: "sector-unknown-list"
+    direction: DOWN
+- assertVisible:
+    id: "sector-unknown-.*"
+    text: "Bank of Baroda.*"
 - tapOn:
     id: "sector-suggestions-apply"
 - assertVisible:
