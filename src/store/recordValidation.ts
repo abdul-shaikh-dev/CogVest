@@ -1,5 +1,5 @@
 import { assertCatalogSplits } from "@/src/domain/stockSplitCatalog";
-import { hasCanonicalAssetConflict, isInstrumentType, isSectorType } from "@/src/domain/assets";
+import { hasCanonicalAssetConflict, isInstrumentType, isSectorBasis, isSectorType } from "@/src/domain/assets";
 import {
   buildGeneratedMonthEndSnapshot,
   getMissingCompletedSnapshotMonths,
@@ -476,6 +476,8 @@ export function hasValidAssetIdentity(asset: Asset) {
     isInstrumentType(asset.instrumentType) &&
     asset.sectorType !== undefined &&
     isSectorType(asset.sectorType) &&
+    (asset.sectorBasis === undefined || isSectorBasis(asset.sectorBasis)) &&
+    (asset.international === undefined || typeof asset.international === "boolean") &&
     (asset.isTaxEligible === undefined ||
       typeof asset.isTaxEligible === "boolean") &&
     getV1AssetCurrencyIssue(asset) === undefined

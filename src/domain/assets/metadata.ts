@@ -1,4 +1,4 @@
-import type { Asset, InstrumentType, SectorType } from "@/src/types";
+import type { Asset, InstrumentType, SectorBasis, SectorType } from "@/src/types";
 
 import { normalizeIsin } from "./identity";
 
@@ -176,10 +176,40 @@ export function isSectorType(value: string): value is SectorType {
   return sectorTypeOptions.includes(value as SectorType);
 }
 
+export const sectorBasisOptions: SectorBasis[] = ["provider", "providerHadNone", "schemeName", "user"];
+
+export function isSectorBasis(value: unknown): value is SectorBasis {
+  return sectorBasisOptions.includes(value as SectorBasis);
+}
+
+/** Where the sector came from, in words, or undefined when it isn't recorded. */
+export function sectorBasisLabel(basis: SectorBasis | undefined) {
+  switch (basis) {
+    case "provider": return "From the price provider";
+    case "providerHadNone": return "The price provider has no sector for it";
+    case "schemeName": return "From the fund's name";
+    case "user": return "Set by you";
+    default: return undefined;
+  }
+}
+
 export function instrumentTypeLabel(value: InstrumentType) {
   return instrumentTypeLabels[value];
 }
 
 export function sectorTypeLabel(value: SectorType) {
   return sectorTypeLabels[value];
+}
+
+/**
+ * Where the reviewed sector came from (#823): the lookup's or saved asset's
+ * basis while its sector is kept, the user's once they pick another one.
+ * Choosing Unknown by hand is "not set", not a basis.
+ */
+export function reviewedSectorBasis(
+  sectorType: SectorType,
+  base: Pick<Asset, "sectorBasis" | "sectorType"> | undefined,
+): SectorBasis | undefined {
+  if (base && base.sectorType === sectorType) return base.sectorBasis;
+  return sectorType === "other" ? undefined : "user";
 }

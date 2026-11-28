@@ -5,8 +5,12 @@ export {
   instrumentTypeLabel,
   instrumentTypeOptions,
   isInstrumentType,
+  isSectorBasis,
   isSectorType,
   normalizeAssetMetadata,
+  reviewedSectorBasis,
+  sectorBasisLabel,
+  sectorBasisOptions,
   sectorTypeLabel,
   sectorTypeOptions,
 } from "./metadata";
@@ -24,6 +28,7 @@ export {
   suggestAssetClassification,
   suggestFundSector,
   suggestPortfolioClassifications,
+  suggestsInternational,
   withSuggestedFundSector,
 } from "./fundClassification";
 export type { AssetClassification, AssetClassificationSuggestion } from "./fundClassification";

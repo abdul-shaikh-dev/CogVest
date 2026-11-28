@@ -123,6 +123,13 @@ describe("SectorBreakdownCard", () => {
     expect(onReview).toHaveBeenCalled();
   });
 
+  it("shows the share held in international holdings", async () => {
+    const screen = await render(
+      <SectorBreakdownCard available internationalPct={25} masked={false} rows={[{ key: "technology", label: "Technology", percentage: 100, value: 4000 }]} suggestionCount={0} unknownCount={0} />,
+    );
+    expect(screen.getByTestId("holdings-sector-international")).toHaveTextContent("International holdings: 25% of holding value, within the sectors above.");
+  });
+
   it("says why the breakdown is unavailable", async () => {
     const screen = await render(<SectorBreakdownCard available={false} masked={false} rows={[]} suggestionCount={0} unknownCount={0} />);
     expect(screen.getByText("Unavailable until every market holding has a price.")).toBeTruthy();
@@ -144,7 +151,7 @@ describe("SectorSuggestionsScreen", () => {
     });
     expect(screen.getByText("1 holding updated")).toBeTruthy();
     const assets = portfolio.getState().assets;
-    expect(assets.find((asset) => asset.id === "itbees")).toMatchObject({ assetClass: "etf", instrumentType: "etf", sectorType: "technology" });
+    expect(assets.find((asset) => asset.id === "itbees")).toMatchObject({ assetClass: "etf", instrumentType: "etf", sectorBasis: "schemeName", sectorType: "technology" });
     expect(assets.find((asset) => asset.id === "bank")?.sectorType).toBe("other");
     expect(assets.find((asset) => asset.id === "bob")).toMatchObject({ assetClass: "stock", sectorType: "other" });
   });
@@ -166,6 +173,25 @@ describe("SectorSuggestionsScreen", () => {
     });
     expect(screen.queryByTestId("sector-unknown-bob")).toBeNull();
     expect(screen.getByText("Nothing to set")).toBeTruthy();
+  });
+
+  it("marks an overseas fund international and says why each Unknown holding has no sector (#823)", async () => {
+    const portfolio = createPortfolioStore({ storage: createMemoryJsonStorage() });
+    const nasdaq: Asset = { ...bankFund, id: "nasdaq", name: "Sample Nasdaq 100 FoF", sectorType: "technology" };
+    portfolio.getState().addAsset(nasdaq);
+    portfolio.getState().addAsset({ ...share, sectorBasis: "providerHadNone" });
+    portfolio.getState().addCashEntry(deposit);
+    portfolio.getState().addTrade(buyShare);
+    const screen = await render(<SectorSuggestionsScreen onClose={jest.fn()} onEditAsset={jest.fn()} store={portfolio} />);
+    expect(screen.getByText("Market: International")).toBeTruthy();
+    expect(screen.getByText("Sector: Unknown · the price provider has none")).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("sector-suggestions-apply"));
+    });
+    // The sector was already set, so only the marker changes and the basis stays unrecorded.
+    const saved = portfolio.getState().assets.find((asset) => asset.id === "nasdaq");
+    expect(saved).toMatchObject({ international: true, sectorType: "technology" });
+    expect(saved).not.toHaveProperty("sectorBasis");
   });
 
   it("says when there is nothing to set", async () => {

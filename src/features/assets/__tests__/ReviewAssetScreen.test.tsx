@@ -179,6 +179,35 @@ describe("ReviewAssetScreen", () => {
     });
   });
 
+  it("shows where the sector came from and makes a new pick the user's (#823)", async () => {
+    const store = createStore();
+    store.setState({ assets: [{ ...asset, sectorBasis: "provider" }] });
+    const onComplete = jest.fn();
+    const screen = await render(<ReviewAssetScreen assetId={asset.id} onCancel={jest.fn()} onComplete={onComplete} store={store} />);
+    expect(screen.getByTestId("asset-sector-basis")).toHaveTextContent("From the price provider");
+    await fireEvent.press(screen.getByTestId("asset-sector-picker"));
+    await fireEvent.press(screen.getByTestId("asset-sector-technology"));
+    expect(screen.getByTestId("asset-sector-basis")).toHaveTextContent("Set by you");
+    await fireEvent.press(screen.getByTestId("asset-market-picker"));
+    await fireEvent.press(screen.getByTestId("asset-market-international"));
+    await fireEvent.press(screen.getByTestId("save-asset-correction-button"));
+    await waitFor(() => expect(onComplete).toHaveBeenCalled());
+    expect(store.getState().assets[0]).toMatchObject({ international: true, sectorBasis: "user", sectorType: "technology" });
+  });
+
+  it("keeps an unset marker and basis when only the name changes, and says Unknown is not set", async () => {
+    const store = createStore();
+    store.setState({ assets: [{ ...asset, sectorType: "other" }] });
+    const onComplete = jest.fn();
+    const screen = await render(<ReviewAssetScreen assetId={asset.id} onCancel={jest.fn()} onComplete={onComplete} store={store} />);
+    expect(screen.getByTestId("asset-sector-basis")).toHaveTextContent("Not set");
+    await fireEvent.changeText(screen.getByTestId("asset-name-input"), "HDFC Bank Limited");
+    await fireEvent.press(screen.getByTestId("save-asset-correction-button"));
+    await waitFor(() => expect(onComplete).toHaveBeenCalled());
+    expect(store.getState().assets[0]).not.toHaveProperty("international");
+    expect(store.getState().assets[0]).not.toHaveProperty("sectorBasis");
+  });
+
   it("shows exact cascade impact and deletes linked records once", async () => {
     const store = createStore();
     const trade: Trade = {

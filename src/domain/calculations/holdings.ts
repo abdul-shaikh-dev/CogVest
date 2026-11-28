@@ -1002,6 +1002,19 @@ export function calculateMetadataAllocation(
     .sort((left, right) => right.value - left.value);
 }
 
+/**
+ * The percentage of holding value in holdings marked international (#823),
+ * or undefined while a price is missing or nothing has value.
+ */
+export function calculateInternationalShare(holdings: Holding[]) {
+  if (holdings.some((holding) => holding.valuation.status === "pending")) return undefined;
+  const valueOf = (holding: Holding) => decimal(holding.calculationBasis?.currentValue ?? holding.currentValue ?? 0);
+  const total = sumFinancialValues(holdings.map(valueOf));
+  if (total.isZero()) return undefined;
+  const international = sumFinancialValues(holdings.filter((holding) => holding.asset.international).map(valueOf));
+  return normalizePercentage(international.dividedBy(total).times(100));
+}
+
 export function calculateInstrumentAllocation(holdings: Holding[]) {
   return calculateMetadataAllocation(holdings, "instrumentType");
 }

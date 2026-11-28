@@ -12,6 +12,7 @@ import type { SectorRow } from "./holdingsSectors";
  */
 export function SectorBreakdownCard({
   available,
+  internationalPct,
   masked,
   onReviewSectors,
   rows,
@@ -19,6 +20,8 @@ export function SectorBreakdownCard({
   unknownCount,
 }: {
   available: boolean;
+  /** Share in holdings marked international, shown when there is any. */
+  internationalPct?: number;
   masked: boolean;
   onReviewSectors?: () => void;
   rows: SectorRow[];
@@ -78,6 +81,11 @@ export function SectorBreakdownCard({
               </View>
             );
           })}
+          {internationalPct === undefined ? null : (
+            <AppText color="secondary" testID="holdings-sector-international" variant="caption">
+              {`International holdings: ${internationalPct.toFixed(0)}% of holding value, within the sectors above.`}
+            </AppText>
+          )}
           {rows.some((row) => row.value === undefined) ? (
             <AppText color="secondary" variant="caption">
               Amounts are hidden because some holdings aren&apos;t priced in INR.

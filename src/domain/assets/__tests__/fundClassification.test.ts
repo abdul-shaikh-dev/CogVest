@@ -6,8 +6,10 @@ import {
   suggestAssetClassification,
   suggestFundSector,
   suggestPortfolioClassifications,
+  suggestsInternational,
   withSuggestedFundSector,
 } from "../fundClassification";
+import { reviewedSectorBasis, sectorBasisLabel } from "../metadata";
 
 function asset(overrides: Partial<Asset>): Asset {
   return {
@@ -155,5 +157,64 @@ describe("withSuggestedFundSector", () => {
   it("keeps a chosen sector and leaves shares alone", () => {
     expect(withSuggestedFundSector(asset({ name: "Nifty Bank Index Fund", sectorType: "technology" })).sectorType).toBe("technology");
     expect(withSuggestedFundSector(asset({ instrumentType: "stock", name: "HDFC Bank" })).sectorType).toBe("other");
+  });
+});
+
+describe("international marker and sector basis (#823)", () => {
+  it.each([
+    "Motilal Oswal Nasdaq 100 Fund of Fund",
+    "Motilal Oswal S&P 500 Index Fund",
+    "Mirae Asset NYSE FANG+ ETF FoF",
+    "ICICI Prudential US Bluechip Equity Fund",
+    "Franklin India Feeder - Franklin U.S. Opportunities Fund",
+    "PGIM India Global Equity Opportunities Fund of Fund",
+    "Nippon India Japan Equity Fund",
+    "Mirae Asset Hang Seng TECH ETF",
+  ])("marks %s as international", (name) => {
+    expect(suggestsInternational(asset({ name }))).toBe(true);
+  });
+
+  it.each([
+    "Nippon India ETF Nifty IT",
+    "HDFC Focused Fund",
+    "SBI Contra Fund for us all",
+    "Parag Parikh Flexi Cap Fund",
+    "Bank of India Large & Mid Cap Fund",
+  ])("leaves %s Indian", (name) => {
+    expect(suggestsInternational(asset({ name }))).toBe(false);
+  });
+
+  it("reads ETF tickers that say nothing in the name", () => {
+    expect(suggestsInternational(asset({ assetClass: "etf", instrumentType: "etf", name: "MON100", symbol: "MON100", ticker: "MON100.NS" }))).toBe(true);
+  });
+
+  it("suggests the marker once, with the scheme-name basis for a new sector", () => {
+    const suggestion = suggestAssetClassification(asset({ name: "Motilal Oswal Nasdaq 100 Fund of Fund" }))!;
+    expect(suggestion).toMatchObject({ markInternational: true, sectorChanged: true });
+    expect(suggestion.next).toMatchObject({ international: true, sectorBasis: "schemeName", sectorType: "technology" });
+    // A marker the user turned off stays off, and a set sector is left alone.
+    expect(suggestAssetClassification(asset({ international: false, name: "Motilal Oswal Nasdaq 100 Fund of Fund", sectorType: "technology" })))
+      .toBeUndefined();
+  });
+
+  it("never replaces a sector the user chose, even Unknown", () => {
+    expect(suggestAssetClassification(asset({ name: "Nifty Bank Index Fund", sectorBasis: "user", sectorType: "other" }))).toBeUndefined();
+    expect(withSuggestedFundSector(asset({ name: "Nifty Bank Index Fund", sectorBasis: "user", sectorType: "other" })).sectorType).toBe("other");
+  });
+
+  it("records the basis and marker when creating a record", () => {
+    expect(withSuggestedFundSector(asset({ name: "Nifty Bank Index Fund" }))).toMatchObject({ sectorBasis: "schemeName", sectorType: "financialServices" });
+    expect(withSuggestedFundSector(asset({ name: "Motilal Oswal S&P 500 Index Fund" }))).toMatchObject({ international: true, sectorBasis: "schemeName" });
+    const unchanged = asset({ name: "Some Active Fund" });
+    expect(withSuggestedFundSector(unchanged)).toBe(unchanged);
+  });
+
+  it("keeps the saved basis while the sector stays, and makes a new pick the user's", () => {
+    expect(reviewedSectorBasis("technology", { sectorBasis: "schemeName", sectorType: "technology" })).toBe("schemeName");
+    expect(reviewedSectorBasis("energy", { sectorBasis: "schemeName", sectorType: "technology" })).toBe("user");
+    expect(reviewedSectorBasis("other", { sectorBasis: "provider", sectorType: "technology" })).toBeUndefined();
+    expect(reviewedSectorBasis("energy", undefined)).toBe("user");
+    expect(sectorBasisLabel("providerHadNone")).toBe("The price provider has no sector for it");
+    expect(sectorBasisLabel(undefined)).toBeUndefined();
   });
 });
