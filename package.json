@@ -13,6 +13,7 @@
     "doctor": "expo-doctor",
     "release:check-harness": "node scripts/check-release-harness.mjs",
     "test": "jest --runInBand",
+    "check:live-providers": "jest --config jest.live.config.js --runInBand",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0",
     "android:doctor": "node scripts/android-doctor.mjs",

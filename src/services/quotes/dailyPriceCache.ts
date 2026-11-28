@@ -13,12 +13,12 @@ const version = 1;
 const maxBytes = 8 * 1024 * 1024;
 const maxEntries = 64;
 const maxPoints = 50_000;
-const maxEntryPoints = 4_000;
+export const dailyPriceMaxEntryPoints = 4_000;
 const freshnessMs = 24 * 60 * 60 * 1000;
-const refreshTimeoutMs = 10_000;
+export const dailyPriceRefreshTimeoutMs = 10_000;
 // AMFI answers each monthly fund-house report in about 1-7s, two at a time,
 // and a year needs twelve or thirteen (#799). Allow for a slower phone link.
-const amfiRefreshTimeoutMs = 90_000;
+export const amfiDailyPriceRefreshTimeoutMs = 90_000;
 let generationCounter = 0;
 
 type Envelope = { entries: DailyPriceEntry[]; generation: string; version: number };
@@ -94,7 +94,7 @@ function validRequest(request: DailyPriceRequest, now: Date) {
 }
 
 function validEntry(entry: DailyPriceEntry, now: Date) {
-  if (!entry || typeof entry !== "object" || !validRequest(entry, now) || typeof entry.complete !== "boolean" || typeof entry.fetchedAt !== "string" || !Array.isArray(entry.points) || entry.points.length > maxEntryPoints) return false;
+  if (!entry || typeof entry !== "object" || !validRequest(entry, now) || typeof entry.complete !== "boolean" || typeof entry.fetchedAt !== "string" || !Array.isArray(entry.points) || entry.points.length > dailyPriceMaxEntryPoints) return false;
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u.test(entry.fetchedAt)) return false;
   const fetchedAt = new Date(entry.fetchedAt);
   if (!Number.isFinite(fetchedAt.getTime()) || fetchedAt.toISOString() !== entry.fetchedAt || fetchedAt.getTime() > now.getTime()) return false;
@@ -245,7 +245,7 @@ export function createDailyPriceCache({ storage, now = () => new Date() }: { now
       let timedOut = false;
       let timeout: ReturnType<typeof setTimeout> | undefined;
       const deadline = new Promise<never>((_resolve, reject) => {
-        timeout = setTimeout(() => { timedOut = true; controller.abort(); reject(new Error("timeout")); }, request.provider === "amfi" ? amfiRefreshTimeoutMs : refreshTimeoutMs);
+        timeout = setTimeout(() => { timedOut = true; controller.abort(); reject(new Error("timeout")); }, request.provider === "amfi" ? amfiDailyPriceRefreshTimeoutMs : dailyPriceRefreshTimeoutMs);
       });
       try {
         const entry = await Promise.race([loader(request, controller.signal), deadline]);

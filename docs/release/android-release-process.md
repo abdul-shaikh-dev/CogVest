@@ -109,6 +109,12 @@ Preview release checklist:
    [PPF Interest Rate Schedule](#ppf-interest-rate-schedule)).
    Put the emulator and Maestro evidence for the release in a
    `## Release verification` section of that PR's description.
+   Run `npm run check:live-providers` (#825). It calls the live AMFI and Yahoo
+   endpoints through the app's own modules over long and old ranges. It fails
+   when an answer is incomplete or rejected, or when a size, row count or
+   duration reaches 80% of the app's limit. It needs the network, so CI does
+   not run it. Add its table to the release verification and explain any
+   failure.
 2. Tag the merge commit on `main` (annotated) and push the tag.
 3. The workflow publishes the GitHub pre-release after the EAS build
    (`scripts/release-notes.mjs`, #827):

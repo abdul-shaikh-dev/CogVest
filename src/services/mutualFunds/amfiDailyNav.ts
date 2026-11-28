@@ -28,7 +28,7 @@ export class AmfiDailyNavError extends Error {
   }
 }
 
-const maxResponseCharacters = 6_000_000;
+export const amfiDailyNavMaxResponseCharacters = 6_000_000;
 const chunkConcurrency = 2;
 // Weekends plus the longest Indian market-holiday run leave no NAV for up to
 // six days; a longer silence at a chunk's end means a short or missing answer.
@@ -127,7 +127,7 @@ async function fetchChunk(
   }
   // expo/fetch can resolve a partial body once aborted.
   if (signal?.aborted) throw new AmfiDailyNavError("offline", "AMFI NAV history request was cancelled.");
-  if (text.length > maxResponseCharacters) {
+  if (text.length > amfiDailyNavMaxResponseCharacters) {
     throw new AmfiDailyNavError("invalid-data", "AMFI NAV history response exceeded the safety limit.");
   }
   return text;
