@@ -289,6 +289,7 @@ export function PortfolioInsightsPanel({
   onOpenDuration,
   masked,
   onReviewSectors,
+  sectorInternationalPct,
   sectorRows,
   sectorSuggestionCount,
   sectorUnknownCount,
@@ -301,6 +302,7 @@ export function PortfolioInsightsPanel({
   onOpenDuration?: () => void;
   masked: boolean;
   onReviewSectors?: () => void;
+  sectorInternationalPct?: number;
   sectorRows: SectorRow[];
   sectorSuggestionCount: number;
   sectorUnknownCount: number;
@@ -362,6 +364,7 @@ export function PortfolioInsightsPanel({
       )}
       <SectorBreakdownCard
         available={allocationAvailable}
+        internationalPct={sectorInternationalPct}
         masked={masked}
         onReviewSectors={onReviewSectors ? () => {
           onClose();

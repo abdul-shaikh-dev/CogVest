@@ -4,6 +4,7 @@ export type {
   AssetExchange,
   Currency,
   InstrumentType,
+  SectorBasis,
   SectorType,
 } from "./asset";
 export type { DailyPriceEntry, DailyPricePoint, DailyPriceRequest } from "./dailyPrice";

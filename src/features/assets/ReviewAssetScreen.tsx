@@ -27,6 +27,8 @@ import {
 import { FormTextField } from "@/src/components/forms";
 import {
   instrumentTypeOptions,
+  reviewedSectorBasis,
+  sectorBasisLabel,
   sectorTypeLabel,
   sectorTypeOptions,
 } from "@/src/domain/assets";
@@ -190,6 +192,8 @@ export function ReviewAssetScreen({
   const [instrumentType, setInstrumentType] = useState<InstrumentType>(() => initialAsset?.instrumentType ?? "other");
   const [sectorType, setSectorType] = useState<SectorType>(() => initialAsset?.sectorType ?? "other");
   const [isTaxEligible, setIsTaxEligible] = useState(() => Boolean(initialAsset?.isTaxEligible));
+  // "india" covers an unset marker; the saved value changes only if the user picks (#823).
+  const [market, setMarket] = useState<"india" | "international">(() => initialAsset?.international ? "international" : "india");
   const [error, setError] = useState<string>();
   const [isSaving, setIsSaving] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
@@ -261,9 +265,17 @@ export function ReviewAssetScreen({
     });
   }
 
+  const sectorBasis = reviewedSectorBasis(sectorType, stableAsset);
+
   function correctedAsset(): Asset {
+    const { international: savedInternational, sectorBasis: _savedBasis, ...base } = stableAsset;
+    const international = market === (savedInternational ? "international" : "india")
+      ? savedInternational
+      : market === "international";
     return {
-      ...stableAsset,
+      ...base,
+      ...(international === undefined ? {} : { international }),
+      ...(sectorBasis ? { sectorBasis } : {}),
       assetClass,
       currency: stableAsset.currency,
       exchange,
@@ -362,6 +374,10 @@ export function ReviewAssetScreen({
           <ChoiceGroup label="Asset class" onChange={setAssetClass} options={assetClasses} testIDPrefix="asset-class" value={assetClass} />
           <ChoiceGroup label="Instrument" onChange={setInstrumentType} options={instrumentTypeOptions} testIDPrefix="asset-instrument" value={instrumentType} />
           <ChoiceGroup label="Sector" onChange={setSectorType} options={sectorTypeOptions} testIDPrefix="asset-sector" value={sectorType} />
+          <AppText color="secondary" testID="asset-sector-basis" variant="caption">
+            {sectorBasisLabel(sectorBasis) ?? (sectorType === "other" ? "Not set" : "Source not recorded")}
+          </AppText>
+          <ChoiceGroup label="Market" onChange={setMarket} options={["india", "international"] as const} testIDPrefix="asset-market" value={market} />
           <ChoiceGroup label="Tax eligibility" onChange={(value) => setIsTaxEligible(value === "eligible")} options={["eligible", "notEligible"] as const} testIDPrefix="asset-tax" value={isTaxEligible ? "eligible" : "notEligible"} />
         </PremiumCard>
 

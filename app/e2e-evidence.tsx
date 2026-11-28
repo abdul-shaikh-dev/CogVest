@@ -156,6 +156,9 @@ export default function E2eEvidenceScreen() {
           <EvidenceText testID={`e2e-asset-${key}-classification`}>
             Classification: {asset.assetClass} | {asset.instrumentType ?? "unset"} | {asset.sectorType ?? "unset"}
           </EvidenceText>
+          <EvidenceText testID={`e2e-asset-${key}-sector-basis`}>
+            Sector basis: {asset.sectorBasis ?? "unset"} | international {asset.international === undefined ? "unset" : String(asset.international)}
+          </EvidenceText>
           <EvidenceText testID={`e2e-asset-${key}-market`}>
             Market: {asset.currency} | {asset.exchange ?? "unset"} | {asset.quoteSourceId ?? "unset"}
           </EvidenceText>

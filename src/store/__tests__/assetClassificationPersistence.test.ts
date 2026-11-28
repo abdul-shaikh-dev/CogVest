@@ -63,4 +63,35 @@ describe("applyAssetClassifications", () => {
     ])).toMatchObject({ reason: "notFound" });
     expect(store.getState().assets).toBe(before);
   });
+  it("saves the sector basis and international marker, and survives a restart (#823)", () => {
+    const { storage, store } = harness();
+    expect(store.getState().applyAssetClassifications([
+      { assetClass: "stock", assetId: "fund", international: true, sectorBasis: "schemeName", sectorType: "financialServices" },
+    ])).toEqual({ applied: 1, status: "applied" });
+    expect(store.getState().assets.find((asset) => asset.id === "fund"))
+      .toMatchObject({ international: true, sectorBasis: "schemeName", sectorType: "financialServices" });
+    expect(createPortfolioStore({ storage, now }).getState().assets.find((asset) => asset.id === "fund"))
+      .toMatchObject({ international: true, sectorBasis: "schemeName" });
+
+    // A new sector without a basis drops the old one rather than keeping a stale source.
+    store.getState().applyAssetClassifications([{ assetClass: "stock", assetId: "fund", sectorType: "energy" }]);
+    expect(store.getState().assets.find((asset) => asset.id === "fund")).not.toHaveProperty("sectorBasis");
+    // The same sector keeps its basis.
+    store.getState().applyAssetClassifications([{ assetClass: "stock", assetId: "fund", sectorBasis: "user", sectorType: "healthcare" }]);
+    store.getState().applyAssetClassifications([{ assetClass: "stock", assetId: "fund", sectorType: "healthcare" }]);
+    expect(store.getState().assets.find((asset) => asset.id === "fund")).toMatchObject({ sectorBasis: "user" });
+  });
+
+  it("rejects a bad basis, a basis without a sector, or a non-boolean marker", () => {
+    const { store } = harness();
+    const before = store.getState().assets;
+    for (const change of [
+      { assetClass: "stock" as const, assetId: "fund", sectorBasis: "guess" as Asset["sectorBasis"], sectorType: "energy" as const },
+      { assetClass: "stock" as const, assetId: "fund", sectorBasis: "user" as const },
+      { assetClass: "stock" as const, assetId: "fund", international: "yes" as unknown as boolean },
+    ]) {
+      expect(store.getState().applyAssetClassifications([change])).toMatchObject({ reason: "invalidChange", status: "rejected" });
+    }
+    expect(store.getState().assets).toBe(before);
+  });
 });

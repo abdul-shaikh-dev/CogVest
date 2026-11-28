@@ -1,6 +1,6 @@
 import { validateEpfLegacyLinks } from "@/src/domain/epf/legacyLinks";
 import { distributionGraphProblems } from "@/src/domain/distributions";
-import { getInstrumentTypeOptions, isSectorType, normalizeAssetMetadata } from "@/src/domain/assets";
+import { getInstrumentTypeOptions, isSectorBasis, isSectorType, normalizeAssetMetadata } from "@/src/domain/assets";
 import { getV1AssetCurrencyIssue } from "@/src/domain/portfolioCurrency";
 
 import type { StoreContext } from "./storeContext";
@@ -68,7 +68,9 @@ export function createAssetActions({ get, now, set, storage }: StoreContext): As
         }
         const instrumentType = change.instrumentType ?? existing.instrumentType;
         if ((instrumentType && !getInstrumentTypeOptions(change.assetClass).includes(instrumentType)) ||
-            (change.sectorType !== undefined && !isSectorType(change.sectorType))) {
+            (change.sectorType !== undefined && !isSectorType(change.sectorType)) ||
+            (change.sectorBasis !== undefined && (change.sectorType === undefined || !isSectorBasis(change.sectorBasis))) ||
+            (change.international !== undefined && typeof change.international !== "boolean")) {
           return { assetId: existing.id, reason: "invalidChange", status: "rejected" };
         }
         // Demerged and PPF-linked records keep their class; their history depends on it.
@@ -76,11 +78,16 @@ export function createAssetActions({ get, now, set, storage }: StoreContext): As
             state.ppfAccounts.some((account) => account.legacyAssetId === existing.id)) {
           return { assetId: existing.id, reason: "linkedRecord", status: "rejected" };
         }
+        const { sectorBasis: oldBasis, ...rest } = existing;
+        const sectorChanged = change.sectorType !== undefined && change.sectorType !== existing.sectorType;
+        const sectorBasis = sectorChanged ? change.sectorBasis : oldBasis;
         updated.set(existing.id, normalizeAssetMetadata({
-          ...existing,
+          ...rest,
           assetClass: change.assetClass,
           ...(instrumentType ? { instrumentType } : {}),
           ...(change.sectorType ? { sectorType: change.sectorType } : {}),
+          ...(sectorBasis ? { sectorBasis } : {}),
+          ...(change.international === undefined ? {} : { international: change.international }),
         }));
       }
       const assets = state.assets.map((asset) => updated.get(asset.id) ?? asset);

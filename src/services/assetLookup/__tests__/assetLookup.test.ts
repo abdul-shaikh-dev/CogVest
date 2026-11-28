@@ -51,6 +51,8 @@ describe("asset lookup service", () => {
       name: "HDFC Bank Limited",
       provider: "yahoo",
       quoteSourceId: "HDFCBANK.NS",
+      // Yahoo gave no sector, so Unknown records why (#823).
+      sectorBasis: "providerHadNone",
       sectorType: "other",
       sectorTypeConfidence: "reviewRequired",
       sourceLabel: "Yahoo Finance",
@@ -66,6 +68,19 @@ describe("asset lookup service", () => {
       .toMatchObject({ sectorType: "commodities" });
     expect(mapYahooQuoteToLookupResult({ quoteType: "ETF", shortname: "Some Fund", symbol: "XYZETF.NS" }))
       .toMatchObject({ sectorType: "diversified" });
+  });
+
+  it("records where the sector came from and marks overseas ETFs (#823)", () => {
+    const nameRule = mapYahooQuoteToLookupResult({ longname: "Nippon India ETF Nifty IT", quoteType: "ETF", symbol: "ITBEES.NS" });
+    expect(nameRule).toMatchObject({ sectorBasis: "schemeName" });
+    expect(nameRule).not.toHaveProperty("international");
+    expect(mapYahooQuoteToLookupResult({ quoteType: "EQUITY", sector: "Technology", shortname: "Infosys", symbol: "INFY.NS" }))
+      .toMatchObject({ sectorBasis: "provider", sectorType: "technology" });
+    // An ETF's default Diversified is an inference, not a recorded basis.
+    expect(mapYahooQuoteToLookupResult({ quoteType: "ETF", shortname: "Some Fund", symbol: "XYZETF.NS" }))
+      .not.toHaveProperty("sectorBasis");
+    expect(mapYahooQuoteToLookupResult({ longname: "Motilal Oswal Nasdaq 100 ETF", quoteType: "ETF", symbol: "MON100.NS" }))
+      .toMatchObject({ international: true, sectorBasis: "schemeName", sectorType: "technology" });
   });
 
   it("accepts only supported Yahoo quote types", () => {

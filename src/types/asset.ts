@@ -40,6 +40,20 @@ export type SectorType =
   | "technology"
   | "utilities";
 
+/**
+ * Where an asset's sector came from (#823). Absent on records saved before
+ * it was kept, and on records whose sector was never set.
+ */
+export type SectorBasis =
+  /** The price provider's sector. */
+  | "provider"
+  /** The price provider was asked and had none, so the sector stays Unknown. */
+  | "providerHadNone"
+  /** A fund or ETF name rule, such as "Nifty IT" for Technology. */
+  | "schemeName"
+  /** Chosen by the user. */
+  | "user";
+
 export type Asset = {
   assetClass: AssetClass;
   currency: Currency;
@@ -47,12 +61,15 @@ export type Asset = {
   exchange?: AssetExchange;
   id: string;
   instrumentType?: InstrumentType;
+  /** Holds mostly securities listed outside India, such as a Nasdaq 100 fund (#823). */
+  international?: boolean;
   /** Normalized 12-character International Securities Identification Number. */
   isin?: string;
   isTaxEligible?: boolean;
   logoUrl?: string;
   name: string;
   quoteSourceId?: string;
+  sectorBasis?: SectorBasis;
   sectorType?: SectorType;
   stockSplits?: StockSplitEvent[];
   symbol: string;

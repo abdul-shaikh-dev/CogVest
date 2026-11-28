@@ -122,6 +122,21 @@ describe("createReviewedAsset", () => {
     expect(asset.id).toBe(savedAsset.id);
   });
 
+  it("records the lookup's sector basis while its sector is kept, and the user's once changed (#823)", () => {
+    const lookup = {
+      assetClass: "etf", currency: "INR", exchange: "NSE", id: "yahoo:MON100.NS", instrumentType: "etf",
+      instrumentTypeConfidence: "inferred", international: true, metadataReviewMessage: "", name: "Motilal Oswal Nasdaq 100 ETF",
+      provider: "yahoo", quoteSourceId: "MON100.NS", sectorBasis: "schemeName", sectorType: "technology",
+      sectorTypeConfidence: "inferred", sourceLabel: "Yahoo Finance", symbol: "MON100", ticker: "MON100.NS",
+    } as const;
+    const base = { ...input, assetClass: "etf" as const, assets: [], instrumentType: "etf" as const, selectedLookupResult: lookup, symbol: "MON100", ticker: "MON100.NS" };
+    expect(createReviewedAsset({ ...base, sectorType: "technology" })).toMatchObject({ international: true, sectorBasis: "schemeName" });
+    expect(createReviewedAsset({ ...base, sectorType: "diversified" })).toMatchObject({ international: true, sectorBasis: "user" });
+    expect(createReviewedAsset({ ...base, sectorType: "other" })).not.toHaveProperty("sectorBasis");
+    // A manual entry with Unknown records no basis.
+    expect(createReviewedAsset({ ...input, assets: [], sectorType: "other" })).not.toHaveProperty("sectorBasis");
+  });
+
   it("keeps a crypto ticker's case", () => {
     expect(
       createReviewedAsset({ ...input, assetClass: "crypto", assets: [], ticker: "btc-inr" })

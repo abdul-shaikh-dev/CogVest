@@ -68,6 +68,7 @@ export {
   calculatePortfolioValuationCoverage,
   calculatePortfolioDayChange,
   calculatePortfolioTotal,
+  calculateInternationalShare,
   calculateSectorAllocation,
   daysHeld,
   getConvictionReadiness,

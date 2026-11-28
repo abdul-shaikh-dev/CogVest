@@ -102,6 +102,8 @@ export function buildManualAssetFromCsvRow(
     name: row.name,
     quoteSourceId: ticker,
     ...(row.sectorType ? { sectorType: row.sectorType } : {}),
+    // A sector the file names is the user's own choice (#823); Unknown is not set.
+    ...(row.sectorType && row.sectorType !== "other" ? { sectorBasis: "user" as const } : {}),
     symbol: symbol.toUpperCase(),
     ticker,
   });

@@ -79,6 +79,20 @@ describe("backup file service", () => {
     const reloaded = createPortfolioStore({ storage, now });
     expect(reloaded.getState().epf.events).toEqual([expect.objectContaining({ id: "claim", type: "claimTransfer", status: "completed" })]);
   });
+  it("keeps an asset's sector basis and international marker through backup, restore and a reload (#823)", async () => {
+    const { service, store, file, storage } = harness();
+    store.getState().addAsset({
+      assetClass: "stock", currency: "INR", id: "nasdaq", instrumentType: "mutualFund", international: true, isin: "INF000000009",
+      name: "Sample Nasdaq 100 FoF", sectorBasis: "schemeName", sectorType: "technology", symbol: "INF000000009", ticker: "INF000000009",
+    });
+    const saved = store.getState().captureBackup().payload;
+    await file.write(await createPortfolioBackup(saved, meta, digest));
+    store.getState().applyAssetClassifications([{ assetClass: "stock", assetId: "nasdaq", international: false, sectorType: "energy" }]);
+    await service.restorePortfolioBackup(ready(await service.selectPortfolioBackup()));
+    const expected = { international: true, sectorBasis: "schemeName", sectorType: "technology" };
+    expect(store.getState().assets.find((asset) => asset.id === "nasdaq")).toMatchObject(expected);
+    expect(createPortfolioStore({ storage, now }).getState().assets.find((asset) => asset.id === "nasdaq")).toMatchObject(expected);
+  });
   it("names the record that blocks a restorable backup", async () => {
     const { service, store, file } = harness();
     store.setState({ monthlySnapshots: [{ id: "snapshot-2025-10", month: "2025-10", cashValue: 100, cryptoValue: 0, debtValue: 0,
