@@ -89,7 +89,7 @@ test("a later visit reuses each month's answer without checking any month again 
     .toEqual([["2026-02", ["cashValue"], "2026-02"]]);
 });
 
-test("a changed record checks every month again, and a re-saved month checks only that month", async () => {
+test("a changed record re-checks months from its date, and a re-saved month only itself", async () => {
   const cache = createSnapshotDriftCache(createMemoryJsonStorage(), "1.0.44+1");
   const checked: string[] = [];
   jest.spyOn(drift, "createSnapshotDriftCheck").mockReturnValue((saved) => {
@@ -114,4 +114,12 @@ test("a changed record checks every month again, and a re-saved month checks onl
   await settle();
   await withCashHook.unmount();
   expect(checked).toEqual(["2026-01", "2026-02"]);
+  checked.length = 0;
+
+  // A record dated in February leaves January's answer standing (#852).
+  const february = { ...withCash, cashEntries: [...withCash.cashEntries, { amount: 5, date: "2026-02-20", id: "cash-2", type: "deposit" }] } as unknown as SnapshotDriftInput;
+  const februaryHook = await renderHook(() => useSnapshotDrift(february, cache));
+  await settle();
+  await februaryHook.unmount();
+  expect(checked).toEqual(["2026-02"]);
 });

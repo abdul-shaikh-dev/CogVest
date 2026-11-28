@@ -10,7 +10,7 @@ import type { MonthlySnapshot } from "@/src/types";
 
 import {
   cachedMonthDrift,
-  fingerprintDriftRecords,
+  createDriftRecordFingerprints,
   fingerprintSavedMonth,
   getDeviceSnapshotDriftCache,
   type SnapshotDriftCache,
@@ -32,7 +32,8 @@ export type SnapshotDriftInput = SnapshotDriftCheckRecords & { monthlySnapshots:
  *
  * Even sliced, a full check keeps JavaScript busy for seconds on a phone, so
  * each month's answer is kept on the device (#851) and reused while neither the
- * records nor that saved month changed; usually no month needs checking again.
+ * records that month reads nor the saved month changed (#852). Usually no month
+ * needs checking again, and a new record re-checks only months from its date.
  */
 export function useSnapshotDrift(
   input: SnapshotDriftInput,
@@ -47,6 +48,7 @@ export function useSnapshotDrift(
     const check = createSnapshotDriftCheck(records);
     let cached: SnapshotDriftCacheEntries | null = null;
     let entries: SnapshotDriftCacheEntries | undefined;
+    let monthRecords: ((month: string) => string) | undefined;
     let checkedCount = 0;
     let next = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -58,20 +60,23 @@ export function useSnapshotDrift(
         return;
       }
       const started = Date.now();
-      if (!entries) {
+      if (!entries || !monthRecords) {
         cached = cache.read();
-        entries = { months: {}, records: fingerprintDriftRecords(records) };
+        entries = { months: {} };
+        monthRecords = createDriftRecordFingerprints(records);
       }
       while (next < months.length && Date.now() - started < sliceMs) {
         const saved = months[next];
         next += 1;
-        const reused = cachedMonthDrift(cached, entries.records, saved);
+        const recordsFingerprint = monthRecords(saved.month);
+        const snapshotFingerprint = fingerprintSavedMonth(saved);
+        const reused = cachedMonthDrift(cached, saved.month, recordsFingerprint, snapshotFingerprint);
         let fields = reused?.fields ?? null;
         if (!reused) {
           fields = check(saved)?.fields ?? null;
           checkedCount += 1;
         }
-        entries.months[saved.month] = { fields, snapshot: fingerprintSavedMonth(saved) };
+        entries.months[saved.month] = { fields, records: recordsFingerprint, snapshot: snapshotFingerprint };
         if (fields) found.set(saved.month, { fields, month: saved.month, saved });
       }
       if (next < months.length) {
