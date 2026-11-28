@@ -4,6 +4,42 @@ Record every full-tier run (weekly and before a release gate) and any smoke run
 used as PR evidence. Newest first. See [`maestro-e2e.md`](maestro-e2e.md) for
 the run cadence.
 
+## 2026-11-28: Full tier on 1.0.43, 77 passed and 4 failed, all 4 resolved
+
+First full tier since 19 November; nine previews shipped in between (#846).
+
+- Build: E2E APK (release config, QA harness on) for x86_64 and arm64-v8a,
+  built from `main` 9bd60d6 (1.0.43 / 44) after a fresh `expo prebuild`.
+  The build worktree's `android/` was still at 1.0.37 from an earlier
+  prebuild; a `gradlew`-only build would have kept that native config and
+  version.
+- Emulator `CogVest_UX_Proof`, API 36, 1280x2856 at 480 dpi, font scale 1.0,
+  cold-booted. Run from the build worktree.
+- `npm run maestro:test`: 77 passed, 4 failed, 101m 18s.
+
+None of the failures was a defect in the app's records or values:
+
+- `cas-native-fresh-portfolio`: stale flow. Since #841 a CAS import takes the
+  sector from the scheme name. The large-cap fund is now `diversified` with
+  sector basis `schemeName`, where the flow still expected `other`. The flow
+  now asserts both. #841 only ran the smoke tier.
+- `epf-reporting`: stale flow. Since the #782 Dashboard pass, amounts are
+  compact (₹1.4L, ₹2L) and the hero reads "invested unknown". The old
+  assertions used full amounts and the word "Unknown". They now check the
+  same facts by `testID`.
+- `cash-entry-focus`: stale flow, with a small behavior change from #784.
+  - In the Cash bottom sheet, Save sits behind the open keyboard. The flow's
+    tap on Save landed on the keyboard and typed "y" into the label.
+  - A swipe dismisses the keyboard, and Save is then fully visible, so entry
+    isn't blocked. The flow now hides the keyboard before scrolling to Save.
+- `snapshot-review`: environmental. Android showed "CogVest E2E isn't
+  responding" right after a clean-state launch, about 90 minutes into the
+  run. It passed on rerun (0m 24s).
+
+Rerun with the three flow fixes, same APK and emulator:
+`cas-native-fresh-portfolio`, `epf-reporting` and `cash-entry-focus` all
+passed (4m 30s).
+
 ## 2026-11-26: UI review fixes (#804 to #809), emulator smoke 15 passed and 14 of 15
 
 - #804 (PR #810), on its own: E2E APK built from 21ed059.

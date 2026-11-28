@@ -66,7 +66,9 @@ appId: ${APP_ID}
 - assertVisible: "Retained cash note"
 - tapOn:
     id: "cash-label-input"
-# Keep the docked keyboard open while scrolling to Save.
+# Since #784 the entry is a bottom sheet: Save sits behind the keyboard until a
+# swipe dismisses it, so close the keyboard before scrolling to Save.
+- hideKeyboard
 - scrollUntilVisible:
     element:
       id: "save-cash-entry-button"
