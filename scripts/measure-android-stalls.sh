@@ -21,7 +21,16 @@ LIST_BOTTOM="${LIST_BOTTOM:-2200}"
 PAGE_TOP="${PAGE_TOP:-900}"
 PAGE_BOTTOM="${PAGE_BOTTOM:-2400}"
 up() { adb shell cat /proc/uptime | awk '{print $1}'; }
-mark() { echo "$(up) $1" >> "$OUT"; }
+# /proc/uptime counts time asleep and logcat -v monotonic does not, so on a
+# phone that has slept they differ (#843). Marks are written on logcat's clock.
+offset() {
+  local uptime monotonic
+  uptime=$(adb shell 'cat /proc/uptime; log -t cogvest-stall-mark offset' | awk 'NR==1{print $1}')
+  monotonic=$(adb logcat -d -v monotonic -s cogvest-stall-mark 2>/dev/null | grep offset | tail -1 | awk '{print $1}')
+  awk -v u="$uptime" -v m="${monotonic:-$uptime}" 'BEGIN{printf "%.3f", u-m}'
+}
+CLOCK_OFFSET="$(offset)"
+mark() { echo "$(up | awk -v o="$CLOCK_OFFSET" '{printf "%.3f", $1-o}') $1" >> "$OUT"; }
 tap() { adb shell input tap "$1" "$2"; }
 swipes() { for _ in 1 2 3 4 5 6; do adb shell input swipe "$SWIPE_X" "$1" "$SWIPE_X" "$2" 450; sleep 0.35; done; }
 idle() { sleep 11; }
