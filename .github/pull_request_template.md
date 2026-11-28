@@ -13,4 +13,6 @@ What a user notices, in a sentence or a few short bullets. The preview
 release notes quote this section (#827). Write "None" for internal changes.
 Without this section the PR title is used. A release-prep PR adds a
 "## Release verification" section instead, with the emulator and Maestro evidence.
+After the preview publishes, record whether the real EAS APK was installed
+on the test phone and smoke-tested, or why not (#844).
 -->

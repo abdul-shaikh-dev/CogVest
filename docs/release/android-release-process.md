@@ -128,6 +128,24 @@ Preview release checklist:
    An existing release for the tag is left unchanged. Edit the published notes
    by hand when they need more. Preview them locally with
    `node scripts/release-notes.mjs <tag> --dry-run`.
+4. Install the published APK on the test phone (#844). Local e2e builds share
+   the release config but are not the shipped file. The real APK is arm64 only,
+   so it can't go on the x86_64 emulator.
+   - Use the Motorola Edge 30 test phone only, never a personal phone. Pin it
+     with `adb -s <serial>` when more than one device is attached.
+   - The preview APK installs as the real package `com.abdulshaikh.cogvest`.
+     The test phone keeps no personal portfolio data in that package.
+   - Download the APK from the release's Download link, then run
+     `adb -s <serial> install -r <apk>`. If the phone refuses the install as a
+     downgrade or a signature mismatch, uninstall the package first; it holds
+     only test data.
+   - Run `npm run android:smoke -- --strict` with `ANDROID_SERIAL=<serial>`.
+     Open Dashboard, Holdings, Progress and Settings by hand. Check the
+     version under Settings matches the tag.
+   - Replace the notes' line "The EAS APK itself was not installed at
+     publication time." with the result: the phone, the Android version, and
+     what passed. If a check fails, file a bug and list it under Known issues.
+   - If the phone isn't available, leave that line as it is and add the reason.
 
 The preview profile builds `arm64-v8a` only, through
 `ORG_GRADLE_PROJECT_reactNativeArchitectures`. The four-ABI 1.0.31 preview hit
