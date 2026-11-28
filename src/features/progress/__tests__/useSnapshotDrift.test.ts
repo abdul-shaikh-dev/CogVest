@@ -3,6 +3,9 @@ import { act, renderHook } from "@testing-library/react-native";
 import * as drift from "@/src/domain/calculations/snapshotRecordDrift";
 import type { MonthlySnapshot } from "@/src/types";
 
+import { createMemoryJsonStorage } from "@/src/services/storage";
+
+import { createSnapshotDriftCache } from "../snapshotDriftCache";
 import { useSnapshotDrift, type SnapshotDriftInput } from "../useSnapshotDrift";
 
 afterEach(() => {
@@ -56,4 +59,59 @@ test("a month saved again since the check drops out at once", async () => {
   jest.spyOn(drift, "createSnapshotDriftCheck").mockReturnValue(() => null);
   await hook.rerender({ value: input([{ ...february, investedValue: 150 }]) });
   expect(hook.result.current.size).toBe(0);
+});
+
+/** Lets the sliced check run to the end on real timers. */
+async function settle() {
+  for (let round = 0; round < 3; round += 1) {
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 10)); });
+  }
+}
+
+test("a later visit reuses each month's answer without checking any month again (#851)", async () => {
+  const cache = createSnapshotDriftCache(createMemoryJsonStorage(), "1.0.44+1");
+  const checked: string[] = [];
+  jest.spyOn(drift, "createSnapshotDriftCheck").mockReturnValue((saved) => {
+    checked.push(saved.month);
+    return saved.month === "2026-02" ? { fields: ["cashValue"], month: saved.month, saved } : null;
+  });
+  const history = input(["2026-01", "2026-02", "2026-03"].map(month));
+  const first = await renderHook(() => useSnapshotDrift(history, cache));
+  await settle();
+  expect(checked).toEqual(["2026-01", "2026-02", "2026-03"]);
+  await first.unmount();
+
+  // The same records and saved months, as after an app restart: a new input object.
+  const second = await renderHook(() => useSnapshotDrift({ ...history, monthlySnapshots: [...history.monthlySnapshots] }, cache));
+  await settle();
+  expect(checked).toHaveLength(3);
+  expect([...second.result.current.entries()].map(([key, value]) => [key, value.fields, value.saved.month]))
+    .toEqual([["2026-02", ["cashValue"], "2026-02"]]);
+});
+
+test("a changed record checks every month again, and a re-saved month checks only that month", async () => {
+  const cache = createSnapshotDriftCache(createMemoryJsonStorage(), "1.0.44+1");
+  const checked: string[] = [];
+  jest.spyOn(drift, "createSnapshotDriftCheck").mockReturnValue((saved) => {
+    checked.push(saved.month);
+    return null;
+  });
+  const history = input(["2026-01", "2026-02"].map(month));
+  const historyHook = await renderHook(() => useSnapshotDrift(history, cache));
+  await settle();
+  await historyHook.unmount();
+  checked.length = 0;
+
+  const resaved = { ...history, monthlySnapshots: [history.monthlySnapshots[0], { ...history.monthlySnapshots[1], cashValue: 5 }] };
+  const resavedHook = await renderHook(() => useSnapshotDrift(resaved, cache));
+  await settle();
+  await resavedHook.unmount();
+  expect(checked).toEqual(["2026-02"]);
+  checked.length = 0;
+
+  const withCash = { ...resaved, cashEntries: [{ amount: 10, date: "2026-01-05", id: "cash-1", type: "deposit" }] } as unknown as SnapshotDriftInput;
+  const withCashHook = await renderHook(() => useSnapshotDrift(withCash, cache));
+  await settle();
+  await withCashHook.unmount();
+  expect(checked).toEqual(["2026-01", "2026-02"]);
 });

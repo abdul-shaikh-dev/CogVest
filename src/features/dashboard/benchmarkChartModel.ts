@@ -30,10 +30,14 @@ export function monthEndOf(month: string) {
   return `${month}-${String(day).padStart(2, "0")}`;
 }
 
+// Built once and reused: constructing an Intl formatter costs milliseconds on
+// Hermes, and a long history formats every month on each render (#851).
+let shortMonthYearFormatter: Intl.DateTimeFormat | undefined;
+
 function shortMonth(month: string) {
   const [year, monthNumber] = month.split("-").map(Number);
-  return new Intl.DateTimeFormat("en-IN", { month: "short", timeZone: "UTC", year: "numeric" })
-    .format(new Date(Date.UTC(year, monthNumber - 1, 1)));
+  shortMonthYearFormatter ??= new Intl.DateTimeFormat("en-IN", { month: "short", timeZone: "UTC", year: "numeric" });
+  return shortMonthYearFormatter.format(new Date(Date.UTC(year, monthNumber - 1, 1)));
 }
 
 export function buildBenchmarkChartData({ endDate, flows, points, snapshots, startDate }: {
