@@ -75,11 +75,65 @@ describe("fetchAssetHistory", () => {
     expect(fetcher.mock.calls[0][1]).toEqual({ signal });
     expect(fetcher.mock.calls[0][0]).toContain("events=splits");
     expect(fetcher.mock.calls[0][0]).toContain("period2=1768089600");
-    expect(entry.complete).toBe(false);
+    // The empty 2 January close is a one-day silence, not a gap.
+    expect(entry.complete).toBe(true);
     expect(entry.points).toEqual([
       { close: 100, date: "2026-01-01" },
       { close: 101, date: "2026-01-03" },
     ]);
+  });
+
+  describe("Yahoo empty closes", () => {
+    const listedNow = new Date("2026-11-28T06:00:00.000Z");
+    const days = (rows: Array<[string, number | null | string]>) => response({
+      chart: { result: [{
+        meta: { currency: "INR", gmtoffset: 19800 },
+        indicators: { quote: [{ close: rows.map(([, close]) => close) }] },
+        timestamp: rows.map(([date]) => Date.parse(`${date}T03:45:00Z`) / 1000),
+      }] },
+    });
+    const history = (from: string, to: string, rows: Array<[string, number | null | string]>) =>
+      fetchAssetHistory(getAssetHistoryRequest(stock, from, to)!, undefined, jest.fn().mockResolvedValue(days(rows)), listedNow);
+
+    it("stays complete when the latest trading day has no close yet", async () => {
+      const entry = await history("2026-11-23", "2026-11-28", [
+        ["2026-11-23", 100], ["2026-11-24", 101], ["2026-11-25", 102], ["2026-11-26", 103], ["2026-11-27", null],
+      ]);
+      expect(entry.complete).toBe(true);
+      expect(entry.points.at(-1)).toEqual({ close: 103, date: "2026-11-26" });
+    });
+
+    it("stays complete across a past day without a close, within the holiday gap", async () => {
+      const entry = await history("2025-10-20", "2025-10-31", [
+        ["2025-10-20", 100], ["2025-10-23", 101], ["2025-10-24", null], ["2025-10-27", 102],
+        ["2025-10-28", 103], ["2025-10-29", 104], ["2025-10-30", 105], ["2025-10-31", 106],
+      ]);
+      expect(entry.complete).toBe(true);
+      expect(entry.points.map((point) => point.date)).not.toContain("2025-10-24");
+    });
+
+    it("marks history partial when closes are missing for longer than six days", async () => {
+      const entry = await history("2025-10-01", "2025-10-20", [
+        ["2025-10-01", 100], ["2025-10-03", null], ["2025-10-06", null], ["2025-10-07", null],
+        ["2025-10-08", null], ["2025-10-09", 101], ["2025-10-10", 102], ["2025-10-13", 103],
+        ["2025-10-14", 104], ["2025-10-15", 105], ["2025-10-16", 106], ["2025-10-17", 107], ["2025-10-20", 108],
+      ]);
+      expect(entry.complete).toBe(false);
+      // A seven-day silence with no empty rows is the same gap.
+      const silent = await history("2025-10-01", "2025-10-13", [
+        ["2025-10-01", 100], ["2025-10-02", 101], ["2025-10-10", 102], ["2025-10-13", 103],
+      ]);
+      expect(silent.complete).toBe(false);
+    });
+
+    it("still marks history partial for a zero, negative or non-numeric close", async () => {
+      for (const bad of [0, -1, "101"]) {
+        const entry = await history("2026-11-23", "2026-11-27", [
+          ["2026-11-23", 100], ["2026-11-24", bad], ["2026-11-25", 102], ["2026-11-26", 103], ["2026-11-27", 104],
+        ]);
+        expect(entry.complete).toBe(false);
+      }
+    });
   });
 
   it("omits conflicting Yahoo duplicate dates and rejects corporate-action history", async () => {

@@ -14,6 +14,10 @@ const coinGeckoUrl = "https://api.coingecko.com/api/v3/coins";
 export const assetHistoryMaxResponseBytes = 4 * 1024 * 1024;
 export const maxYahooRows = 4_000;
 const maxCoinGeckoRows = 50_000;
+// Weekends plus the longest Indian market-holiday run leave no close for up to
+// six days, the same allowance as AMFI NAVs. Yahoo also leaves some trading
+// days' close empty, often the latest one, so a short silence is not a gap.
+const maxYahooGapDays = 6;
 
 export const cryptoDailyObservationNote =
   "CoinGecko daily observations are UTC-boundary values, not an exchange-closing guarantee.";
@@ -365,6 +369,8 @@ function yahooEntry(request: DailyPriceRequest, payload: YahooPayload, now: Date
       if (date === null) complete = false;
       continue;
     }
+    // An empty close is a day without a price; the gap check below judges it.
+    if (close === null || close === undefined) continue;
     if (typeof close !== "number" || !Number.isFinite(close) || close <= 0) {
       complete = false;
       continue;
@@ -387,7 +393,8 @@ function yahooEntry(request: DailyPriceRequest, payload: YahooPayload, now: Date
   }
   if (
     points[0].date > dateAfter(request.from, 4) ||
-    points.at(-1)!.date < dateAfter(request.to, -4)
+    points.at(-1)!.date < dateAfter(request.to, -4) ||
+    points.some((point, index) => index > 0 && point.date > dateAfter(points[index - 1].date, maxYahooGapDays + 1))
   ) {
     complete = false;
   }
