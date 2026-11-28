@@ -59,7 +59,7 @@ export function SectorSuggestionsScreen({
         {unknown.map((asset) => (
           <GroupedListRow
             key={asset.id}
-            meta="Sector: Unknown"
+            meta={asset.sectorBasis === "providerHadNone" ? "Sector: Unknown · the price provider has none" : "Sector: Unknown · not set"}
             onPress={() => onEditAsset(asset.id)}
             showChevron
             testID={`sector-unknown-${asset.id}`}
@@ -84,6 +84,8 @@ export function SectorSuggestionsScreen({
       assetClass: suggestion.next.assetClass,
       assetId: suggestion.assetId,
       instrumentType: suggestion.next.instrumentType,
+      ...(suggestion.markInternational ? { international: true } : {}),
+      ...(suggestion.sectorChanged ? { sectorBasis: suggestion.next.sectorBasis } : {}),
       sectorType: suggestion.next.sectorType,
     })));
     setResult(outcome.status === "applied"

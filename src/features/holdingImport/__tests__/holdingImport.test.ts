@@ -79,6 +79,14 @@ describe("holdings CSV import planning", () => {
     ).toMatchObject({ assetClass: "stock", ticker: "HDFCBANK.NS" });
   });
 
+  it("treats a sector the file names as the user's, and a name-rule sector as the scheme name's (#823)", () => {
+    const manual = { ...row, assetClass: "stock" as const, exchange: "NSE" as const };
+    expect(buildManualAssetFromCsvRow({ ...manual, sectorType: "energy" })).toMatchObject({ sectorBasis: "user", sectorType: "energy" });
+    expect(buildManualAssetFromCsvRow({ ...manual, sectorType: "other" })).not.toHaveProperty("sectorBasis");
+    expect(buildManualAssetFromCsvRow({ ...manual, instrumentType: "mutualFund", name: "Motilal Oswal Nasdaq 100 FoF" }))
+      .toMatchObject({ international: true, sectorBasis: "schemeName", sectorType: "technology" });
+  });
+
   it("derives exact projected totals and pending coverage from domain functions", () => {
     const store = createPortfolioStore({ storage: createMemoryJsonStorage() });
     const asset = assetFromLookupResult(lookup);

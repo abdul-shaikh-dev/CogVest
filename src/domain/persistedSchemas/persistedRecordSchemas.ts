@@ -139,11 +139,13 @@ export const assetSchema = z.object({
       "stock",
     ])
     .optional(),
+  international: z.boolean().optional(),
   isin: normalizedIsinSchema.optional(),
   isTaxEligible: z.boolean().optional(),
   logoUrl: z.string().optional(),
   name: nonEmptyStringSchema,
   quoteSourceId: nonEmptyStringSchema.optional(),
+  sectorBasis: z.enum(["provider", "providerHadNone", "schemeName", "user"]).optional(),
   sectorType: z
     .enum([
       "commodities",

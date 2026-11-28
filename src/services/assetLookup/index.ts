@@ -2,12 +2,14 @@ import {
   createCanonicalAssetMatcher,
   getDefaultAssetMetadata,
   suggestFundSector,
+  suggestsInternational,
 } from "@/src/domain/assets";
 import type {
   AssetClass,
   AssetExchange,
   Currency,
   InstrumentType,
+  SectorBasis,
   SectorType,
 } from "@/src/types";
 
@@ -27,8 +29,12 @@ export type AssetLookupResult = {
   instrumentTypeConfidence: AssetMetadataConfidence;
   metadataReviewMessage: string;
   name: string;
+  /** The name points overseas, such as a Nasdaq 100 ETF (#823). */
+  international?: boolean;
   provider: AssetLookupProvider;
   quoteSourceId: string;
+  /** Where the sector came from, when it is known (#823). */
+  sectorBasis?: SectorBasis;
   sectorType: SectorType;
   sectorTypeConfidence: AssetMetadataConfidence;
   sourceLabel: string;
@@ -184,9 +190,15 @@ export function mapYahooQuoteToLookupResult(
     ? undefined
     : mapYahooSectorToSectorType(quote.sector, quote.sectorDisp);
   // An ETF's name states what it holds (#823): "Nifty IT", "Gold BeES".
-  const sectorType = providerSector
-    ?? (isEtf ? suggestFundSector({ name: quote.longname ?? quote.shortname ?? "", symbol: ticker, ticker }) : undefined)
-    ?? defaults.sectorType;
+  const nameFacts = { name: quote.longname ?? quote.shortname ?? "", symbol: ticker, ticker };
+  const nameSector = isEtf ? suggestFundSector(nameFacts) : undefined;
+  const sectorType = providerSector ?? nameSector ?? defaults.sectorType;
+  // A share whose provider gives no sector stays Unknown for that reason.
+  const sectorBasis: SectorBasis | undefined = providerSector
+    ? "provider"
+    : nameSector
+      ? "schemeName"
+      : !isEtf && sectorType === "other" ? "providerHadNone" : undefined;
   const sectorTypeConfidence = providerSector
     ? "provider"
     : isEtf
@@ -204,8 +216,10 @@ export function mapYahooQuoteToLookupResult(
       ? "Provider details look ready. Confirm before saving."
       : "Sector is unknown. Add it only if it helps your portfolio review.",
     name: quote.longname?.trim() || quote.shortname?.trim() || ticker,
+    ...(isEtf && suggestsInternational(nameFacts) ? { international: true } : {}),
     provider: "yahoo",
     quoteSourceId: ticker,
+    ...(sectorBasis ? { sectorBasis } : {}),
     sectorType,
     sectorTypeConfidence,
     sourceLabel: "Yahoo Finance",

@@ -4,7 +4,7 @@ import {
   suggestPortfolioClassifications,
   type AssetClassificationSuggestion,
 } from "@/src/domain/assets";
-import { calculateSectorAllocation } from "@/src/domain/calculations";
+import { calculateInternationalShare, calculateSectorAllocation } from "@/src/domain/calculations";
 import type { Asset, Holding, PpfAccount, SectorType } from "@/src/types";
 
 /**
@@ -29,6 +29,12 @@ export function getSectorRows(holdings: Holding[]): SectorRow[] {
     ...(allInr ? { value: item.value } : {}),
   }));
   return [...rows.filter((row) => row.key !== "other"), ...rows.filter((row) => row.key === "other")];
+}
+
+/** The share held in holdings marked international, or undefined when there is none to show. */
+export function getInternationalShare(holdings: Holding[]) {
+  const share = calculateInternationalShare(holdings);
+  return share === undefined || share === 0 ? undefined : share;
 }
 
 /** The holdings the sector breakdown covers: market holdings, without cash and PPF. */
@@ -58,7 +64,7 @@ export function reviewableSuggestions(assets: Asset[], ppfAccounts: Pick<PpfAcco
     .filter((suggestion) => !ppfLinked.has(suggestion.assetId) && !demergedChildren.has(suggestion.assetId));
 }
 
-/** "Unknown → Technology", "Company share → ETF", or both. */
+/** "Unknown → Technology", "Company share → ETF", "Market: International", or several. */
 export function describeSuggestion(suggestion: AssetClassificationSuggestion) {
   const lines: string[] = [];
   if (suggestion.sectorChanged) {
@@ -67,5 +73,6 @@ export function describeSuggestion(suggestion: AssetClassificationSuggestion) {
   if (suggestion.reclassifyAsEtf) {
     lines.push(`Type: ${instrumentTypeLabel(suggestion.current.instrumentType ?? "stock")} → ${instrumentTypeLabel("etf")}`);
   }
+  if (suggestion.markInternational) lines.push("Market: International");
   return lines;
 }

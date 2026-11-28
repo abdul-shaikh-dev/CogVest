@@ -1,4 +1,4 @@
-import { findCanonicalAsset, normalizeAssetMetadata, normalizeIsin, suggestFundSector } from "@/src/domain/assets";
+import { findCanonicalAsset, normalizeAssetMetadata, normalizeIsin, suggestFundSector, suggestsInternational } from "@/src/domain/assets";
 import type { CasSchemeReview } from "@/src/domain/camsKfinCasNormalizer";
 import type { TransactionCsvCandidate } from "@/src/domain/transactionCsv";
 import type { Asset } from "@/src/types";
@@ -33,18 +33,23 @@ export function assetFromCasScheme(
       ? "arbitrageFund"
       : "mutualFund";
 
+  const nameFacts = { name, symbol: isin, ticker: isin };
+  const nameSector = instrumentType !== "liquidFund" && allocation === "equity" ? suggestFundSector(nameFacts) : undefined;
   return {
     assetClass: allocation === "equity" ? "stock" : "debt",
     currency: "INR",
     id: `cas:${isin}`,
     instrumentType,
+    ...(suggestsInternational(nameFacts) ? { international: true } : {}),
     isin,
     name,
+    // A sector read from the scheme name records that basis (#823).
+    ...(nameSector ? { sectorBasis: "schemeName" as const } : {}),
     sectorType: instrumentType === "liquidFund"
       ? "liquidity"
       : allocation === "debt"
         ? "fixedIncome"
-        : suggestFundSector({ name, symbol: isin, ticker: isin }) ?? "other",
+        : nameSector ?? "other",
     symbol: isin,
     ticker: isin,
   };

@@ -75,6 +75,23 @@ describe("persisted portfolio schema", () => {
     });
   });
 
+  it("round trips an asset's sector basis and international marker (#823)", () => {
+    const asset = { ...validAsset, international: true, sectorBasis: "schemeName", sectorType: "technology" };
+    expect(parsePersistedPortfolio(serialize({ assets: [asset], schemaVersion: 13 }))).toEqual({
+      success: true,
+      data: { assets: [asset], schemaVersion: 13 },
+    });
+  });
+
+  it.each([
+    { sectorBasis: "guess" },
+    { sectorBasis: "" },
+    { international: "yes" },
+  ])("rejects an invalid sector basis or marker %#", (fields) => {
+    expect(parsePersistedPortfolio(serialize({ assets: [{ ...validAsset, ...fields }], schemaVersion: 13 })))
+      .toEqual({ reason: "invalid-shape", success: false });
+  });
+
   it.each([
     { childAssetId: "", eventId: "event-1" },
     { childAssetId: "child-asset", eventId: " " },

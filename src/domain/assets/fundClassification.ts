@@ -1,4 +1,4 @@
-import type { Asset, AssetClass, InstrumentType, SectorType } from "@/src/types";
+import type { Asset, AssetClass, InstrumentType, SectorBasis, SectorType } from "@/src/types";
 
 /**
  * Sector and ETF suggestions from a fund's name (#823).
@@ -9,7 +9,9 @@ import type { Asset, AssetClass, InstrumentType, SectorType } from "@/src/types"
  * not a sector label, and a share's sector is the user's call.
  *
  * Suggestions only replace a default sector (Unknown, or Diversified on an
- * ETF), and existing records change only after the user confirms them.
+ * ETF) that the user didn't choose, and existing records change only after
+ * the user confirms them. A suggested sector records "schemeName" as its
+ * basis, and a fund whose name points overseas is marked international.
  */
 
 type Rule = { pattern: RegExp; sector: SectorType };
@@ -59,6 +61,12 @@ const tickerRules: Rule[] = [
   { pattern: /^(NIFTY|JUNIOR|NEXT50|SENSEX|MID|SMALL|CPSE|PSU|NV20|MOM|LOWVOL|QUAL|ALPHA)/, sector: "diversified" },
 ];
 
+// Funds and ETFs that hold securities listed outside India. "US" counts only
+// as a capitalised whole word ("US Bluechip"), so "us" in a phrase never does.
+const internationalName = /\b(nasdaq|s\s?&\s?p\s?500|nyse|fang\+?|international|global|overseas|world|worldwide|developed markets?|emerging markets?|hang seng|japan|china|greater china|taiwan|europe(an)?|asia pacific|ex[- ]india)\b|\bU\.S\./i;
+const internationalUs = /\bUS\b/;
+const internationalTicker = /^(MON100|MAFANG|MASPTOP50|HNGSNGBEES|MAHKTECH|NASDAQ|SP500)/;
+
 const fundOfFunds = /\b(fund of funds?|fof)\b/i;
 const etfName = /\b(etf|bees)\b/i;
 const etfTicker = /(BEES|IETF|ETF)$/i;
@@ -79,6 +87,12 @@ export function suggestFundSector(asset: Pick<Asset, "name" | "symbol" | "ticker
   if (fromName) return fromName;
   const ticker = tickerSymbol(asset);
   return ticker ? tickerRules.find((rule) => rule.pattern.test(ticker))?.sector : undefined;
+}
+
+/** A fund or ETF whose name or ticker says it holds securities listed outside India. */
+export function suggestsInternational(asset: Pick<Asset, "name" | "symbol" | "ticker">) {
+  const name = fundName(asset.name ?? "");
+  return internationalName.test(name) || internationalUs.test(name) || internationalTicker.test(tickerSymbol(asset));
 }
 
 /**
@@ -102,8 +116,12 @@ export function isFundLike(asset: Asset) {
     || looksLikeListedEtf(asset);
 }
 
-/** Unknown, or the Diversified an ETF gets by default, which a name can improve on. */
-export function isDefaultSector(asset: Pick<Asset, "assetClass" | "sectorType">) {
+/**
+ * Unknown, or the Diversified an ETF gets by default, which a name can
+ * improve on. A sector the user chose is never a default, even Unknown.
+ */
+export function isDefaultSector(asset: Pick<Asset, "assetClass" | "sectorBasis" | "sectorType">) {
+  if (asset.sectorBasis === "user") return false;
   return asset.sectorType === undefined
     || asset.sectorType === "other"
     || (asset.sectorType === "diversified" && asset.assetClass === "etf");
@@ -112,6 +130,8 @@ export function isDefaultSector(asset: Pick<Asset, "assetClass" | "sectorType">)
 export type AssetClassification = {
   assetClass: AssetClass;
   instrumentType?: InstrumentType;
+  international?: boolean;
+  sectorBasis?: SectorBasis;
   sectorType?: SectorType;
 };
 
@@ -119,6 +139,8 @@ export type AssetClassificationSuggestion = {
   assetId: string;
   current: AssetClassification;
   next: AssetClassification;
+  /** The name says the fund holds overseas securities, and the record isn't marked yet. */
+  markInternational: boolean;
   /** The record is an exchange ETF saved as a company share. */
   reclassifyAsEtf: boolean;
   /** The suggested sector replaces a default one. */
@@ -134,10 +156,14 @@ export function suggestAssetClassification(asset: Asset): AssetClassificationSug
   const reclassifyAsEtf = looksLikeListedEtf(asset);
   const suggested = isDefaultSector(asset) ? suggestFundSector(asset) : undefined;
   const sectorChanged = suggested !== undefined && suggested !== asset.sectorType;
-  if (!reclassifyAsEtf && !sectorChanged) return undefined;
+  // Only an unset marker is suggested; a user's "not international" stays.
+  const markInternational = asset.international === undefined && suggestsInternational(asset);
+  if (!reclassifyAsEtf && !sectorChanged && !markInternational) return undefined;
   const current: AssetClassification = {
     assetClass: asset.assetClass,
     instrumentType: asset.instrumentType,
+    international: asset.international,
+    sectorBasis: asset.sectorBasis,
     sectorType: asset.sectorType,
   };
   return {
@@ -146,8 +172,11 @@ export function suggestAssetClassification(asset: Asset): AssetClassificationSug
     next: {
       assetClass: reclassifyAsEtf ? "etf" : asset.assetClass,
       instrumentType: reclassifyAsEtf ? "etf" : asset.instrumentType,
+      international: markInternational ? true : asset.international,
+      sectorBasis: sectorChanged ? "schemeName" : asset.sectorBasis,
       sectorType: sectorChanged ? suggested : asset.sectorType,
     },
+    markInternational,
     reclassifyAsEtf,
     sectorChanged,
   };
@@ -159,10 +188,17 @@ export function suggestPortfolioClassifications(assets: Asset[]) {
 
 /**
  * Applies the name's sector to a record being created (lookup or import),
- * only when the record is a fund and its sector is still the default.
+ * only when the record is a fund and its sector is still the default, and
+ * marks a fund whose name points overseas as international.
  */
 export function withSuggestedFundSector<T extends Asset>(asset: T): T {
-  if (asset.demerger || !isFundLike(asset) || !isDefaultSector(asset)) return asset;
-  const sectorType = suggestFundSector(asset);
-  return sectorType ? { ...asset, sectorType } : asset;
+  if (asset.demerger || !isFundLike(asset)) return asset;
+  const sectorType = isDefaultSector(asset) ? suggestFundSector(asset) : undefined;
+  const international = asset.international === undefined && suggestsInternational(asset);
+  if (!sectorType && !international) return asset;
+  return {
+    ...asset,
+    ...(sectorType ? { sectorBasis: "schemeName" as const, sectorType } : {}),
+    ...(international ? { international: true } : {}),
+  };
 }

@@ -1,6 +1,6 @@
 import type { StoreApi } from "zustand/vanilla";
 
-import { findCanonicalAsset } from "@/src/domain/assets";
+import { findCanonicalAsset, reviewedSectorBasis } from "@/src/domain/assets";
 import { calculateHolding } from "@/src/domain/calculations";
 import { projectDemergers } from "@/src/domain/demergers";
 import type { AssetLookupResult } from "@/src/services/assetLookup";
@@ -159,13 +159,16 @@ export function buildLookupAsset(result: AssetLookupResult): Asset {
     exchange: result.exchange,
     id: createId("asset"),
     instrumentType: result.instrumentType,
+    ...(result.international ? { international: true } : {}),
     name: result.name,
     quoteSourceId: result.quoteSourceId,
+    ...(result.sectorBasis ? { sectorBasis: result.sectorBasis } : {}),
     sectorType: result.sectorType,
     symbol: result.symbol,
     ticker: result.ticker,
   };
 }
+
 
 /**
  * The asset to save from the reviewed fields, reusing a saved asset's id when
@@ -200,6 +203,7 @@ export function createReviewedAsset({
     ? buildLookupAsset(selectedLookupResult)
     : undefined;
   const baseAsset = lookupAsset ?? selectedAsset;
+  const sectorBasis = reviewedSectorBasis(sectorType, baseAsset);
   const candidate = {
     assetClass,
     currency: baseAsset?.currency ?? "INR",
@@ -209,6 +213,8 @@ export function createReviewedAsset({
     instrumentType,
     name: assetName.trim(),
     quoteSourceId: quoteSourceId.trim() || ticker.trim(),
+    ...(baseAsset?.international === undefined ? {} : { international: baseAsset.international }),
+    ...(sectorBasis ? { sectorBasis } : {}),
     sectorType,
     symbol: symbol.trim().toUpperCase(),
     ticker:

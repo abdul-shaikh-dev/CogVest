@@ -366,6 +366,10 @@ export type AssetClassificationChange = {
   assetClass: Asset["assetClass"];
   assetId: string;
   instrumentType?: Asset["instrumentType"];
+  /** Sets the international marker when given. */
+  international?: boolean;
+  /** Where a new sector came from; replaces the old basis whenever the sector changes. */
+  sectorBasis?: Asset["sectorBasis"];
   sectorType?: Asset["sectorType"];
 };
 

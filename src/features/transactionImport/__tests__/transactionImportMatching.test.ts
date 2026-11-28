@@ -26,10 +26,11 @@ describe("Tradebook match suggestions", () => {
 
 describe("CAS scheme identities", () => {
   it.each([
-    ["Sample Equity Fund - Direct Growth", "stock", "mutualFund", "diversified"],
-    ["Sample Nifty IT Index Fund - Direct Growth", "stock", "mutualFund", "technology"],
-    ["Sample Liquid Fund - Direct Growth", "debt", "liquidFund", "liquidity"],
-  ] as const)("creates a classified local holding for %s", (name, assetClass, instrumentType, sectorType) => {
+    ["Sample Equity Fund - Direct Growth", "stock", "mutualFund", "diversified", { sectorBasis: "schemeName" }],
+    ["Sample Nifty IT Index Fund - Direct Growth", "stock", "mutualFund", "technology", { sectorBasis: "schemeName" }],
+    ["Sample Liquid Fund - Direct Growth", "debt", "liquidFund", "liquidity", {}],
+    ["Sample Nasdaq 100 FoF - Direct Growth", "stock", "mutualFund", "technology", { international: true, sectorBasis: "schemeName" }],
+  ] as const)("creates a classified local holding for %s", (name, assetClass, instrumentType, sectorType, extra) => {
     expect(assetFromCasScheme({
       closingUnits: "10",
       events: [],
@@ -46,6 +47,7 @@ describe("CAS scheme identities", () => {
       instrumentType,
       isin: "INF000000001",
       name,
+      ...extra,
       sectorType,
       symbol: "INF000000001",
       ticker: "INF000000001",
