@@ -7,10 +7,17 @@ appId: ${APP_ID}
       id: dashboard-screen
     timeout: 120000
 - openLink: "${SCHEME}:///epf-reporting-qa?token=cogvest-local-visual-qa"
-- assertVisible: "Unknown"
+# Since #782 the Dashboard shows compact amounts; EPF capital is unknown, so invested is too.
+- assertVisible:
+    id: dashboard-invested-context
+    text: ".*invested unknown.*"
 - assertVisible: "EPF recorded balances"
-- assertVisible: "₹1,40,000.00"
-- assertVisible: "₹2,00,000.00"
+- assertVisible:
+    id: dashboard-epf-value
+    text: "₹1.4L"
+- assertVisible:
+    id: dashboard-hero-value
+    text: "₹2L"
 - takeScreenshot: .expo/epf-545/standard
 - scrollUntilVisible:
     element:
@@ -22,10 +29,12 @@ appId: ${APP_ID}
 - tapOn:
     id: dashboard-performance-toggle
     retryTapIfNoChange: true
-- assertVisible: "Unknown"
+- assertVisible:
+    id: dashboard-invested-context
+    text: ".*invested unknown.*"
 - tapOn:
     id: dashboard-mask-toggle
-- assertNotVisible: "₹1,40,000.00"
+- assertNotVisible: "₹1.4L"
 - assertVisible: "Amount hidden"
 - takeScreenshot: .expo/epf-545/masked
 - openLink: "${SCHEME}:///epf-reporting-qa?token=cogvest-local-visual-qa&mode=progress"
