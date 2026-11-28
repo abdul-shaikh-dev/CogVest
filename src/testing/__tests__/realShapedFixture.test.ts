@@ -1,4 +1,4 @@
-import { calculateHoldings, calculateInternationalShare } from "@/src/domain/calculations/holdings";
+import { calculateHoldings, calculateInternationalShare, calculateSectorAllocation } from "@/src/domain/calculations/holdings";
 import { validateBackupPayload } from "@/src/domain/portfolioBackup";
 import { buildAssetXirrInput } from "@/src/domain/xirrInputs";
 import { summariseXirr } from "@/src/domain/xirrSummary";
@@ -71,6 +71,22 @@ describe("real-shaped synthetic portfolio (#843)", () => {
     const total = holdings.reduce((sum, item) => sum + (item.currentValue ?? 0), 0);
     const us = holding(realShapedIds.fund("elm-us")).currentValue!;
     expect(calculateInternationalShare(holdings)).toBeCloseTo((us / total) * 100, 1);
+  });
+
+  it("breaks value down by sector, with the no-sector fund under other", () => {
+    const held = holdings.filter((item) => (item.currentValue ?? 0) > 0);
+    const total = held.reduce((sum, item) => sum + item.currentValue!, 0);
+    const share = (sector: string) => (held
+      .filter((item) => (item.asset.sectorType ?? "other") === sector)
+      .reduce((sum, item) => sum + item.currentValue!, 0) / total) * 100;
+    const allocation = calculateSectorAllocation(holdings);
+    expect(new Set(allocation.map((item) => item.label))).toEqual(new Set(held.map((item) => item.asset.sectorType ?? "other")));
+    for (const sector of ["diversified", "liquidity", "fixedIncome", "technology", "other"]) {
+      expect(allocation.find((item) => item.label === sector)?.percentage).toBeCloseTo(share(sector), 1);
+    }
+    const noSector = portfolio.assets.find((asset) => asset.sectorBasis === "providerHadNone")!;
+    expect(noSector.sectorType).toBe("other");
+    expect(holding(noSector.id).currentValue).toBeGreaterThan(0);
   });
 
   it("gives a SIP fund an XIRR close to its growth rate", () => {

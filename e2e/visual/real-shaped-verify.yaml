@@ -6,6 +6,18 @@ appId: ${APP_ID}
     visible:
       id: dashboard-screen
     timeout: 60000
+# The unlisted holding has no purchase date, so invested capital is unknown.
+- assertVisible:
+    id: dashboard-invested-context
+    text: ".*invested unknown.*"
+# The EPF checkpoint is a fixed ₹6,40,000; it does not depend on quotes.
+- scrollUntilVisible:
+    element:
+      id: dashboard-epf-value
+    direction: DOWN
+- assertVisible:
+    id: dashboard-epf-value
+    text: "₹6.4L"
 - openLink: "${SCHEME}:///holdings"
 - extendedWaitUntil:
     visible:
