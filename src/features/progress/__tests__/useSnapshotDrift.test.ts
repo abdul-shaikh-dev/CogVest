@@ -76,13 +76,13 @@ test("a later visit reuses each month's answer without checking any month again 
     return saved.month === "2026-02" ? { fields: ["cashValue"], month: saved.month, saved } : null;
   });
   const history = input(["2026-01", "2026-02", "2026-03"].map(month));
-  const first = await renderHook(() => useSnapshotDrift(history, cache));
+  const first = await renderHook(() => useSnapshotDrift(history, cache, 0));
   await settle();
   expect(checked).toEqual(["2026-01", "2026-02", "2026-03"]);
   await first.unmount();
 
   // The same records and saved months, as after an app restart: a new input object.
-  const second = await renderHook(() => useSnapshotDrift({ ...history, monthlySnapshots: [...history.monthlySnapshots] }, cache));
+  const second = await renderHook(() => useSnapshotDrift({ ...history, monthlySnapshots: [...history.monthlySnapshots] }, cache, 0));
   await settle();
   expect(checked).toHaveLength(3);
   expect([...second.result.current.entries()].map(([key, value]) => [key, value.fields, value.saved.month]))
@@ -97,20 +97,20 @@ test("a changed record re-checks months from its date, and a re-saved month only
     return null;
   });
   const history = input(["2026-01", "2026-02"].map(month));
-  const historyHook = await renderHook(() => useSnapshotDrift(history, cache));
+  const historyHook = await renderHook(() => useSnapshotDrift(history, cache, 0));
   await settle();
   await historyHook.unmount();
   checked.length = 0;
 
   const resaved = { ...history, monthlySnapshots: [history.monthlySnapshots[0], { ...history.monthlySnapshots[1], cashValue: 5 }] };
-  const resavedHook = await renderHook(() => useSnapshotDrift(resaved, cache));
+  const resavedHook = await renderHook(() => useSnapshotDrift(resaved, cache, 0));
   await settle();
   await resavedHook.unmount();
   expect(checked).toEqual(["2026-02"]);
   checked.length = 0;
 
   const withCash = { ...resaved, cashEntries: [{ amount: 10, date: "2026-01-05", id: "cash-1", type: "deposit" }] } as unknown as SnapshotDriftInput;
-  const withCashHook = await renderHook(() => useSnapshotDrift(withCash, cache));
+  const withCashHook = await renderHook(() => useSnapshotDrift(withCash, cache, 0));
   await settle();
   await withCashHook.unmount();
   expect(checked).toEqual(["2026-01", "2026-02"]);
@@ -118,8 +118,33 @@ test("a changed record re-checks months from its date, and a re-saved month only
 
   // A record dated in February leaves January's answer standing (#852).
   const february = { ...withCash, cashEntries: [...withCash.cashEntries, { amount: 5, date: "2026-02-20", id: "cash-2", type: "deposit" }] } as unknown as SnapshotDriftInput;
-  const februaryHook = await renderHook(() => useSnapshotDrift(february, cache));
+  const februaryHook = await renderHook(() => useSnapshotDrift(february, cache, 0));
   await settle();
   await februaryHook.unmount();
   expect(checked).toEqual(["2026-02"]);
+});
+
+test("months to work out wait until the screen has been open a while; cached months don't", async () => {
+  jest.useFakeTimers();
+  const cache = createSnapshotDriftCache(createMemoryJsonStorage(), "1.0.44+1");
+  const checked: string[] = [];
+  jest.spyOn(drift, "createSnapshotDriftCheck").mockReturnValue((saved) => {
+    checked.push(saved.month);
+    return saved.month === "2026-01" ? { fields: ["investedValue"], month: saved.month, saved } : null;
+  });
+  const history = input(["2026-01", "2026-02"].map(month));
+  const first = await renderHook(() => useSnapshotDrift(history, cache, 3000));
+  await act(() => jest.advanceTimersByTime(2999));
+  expect(checked).toEqual([]);
+  await act(() => jest.advanceTimersByTime(1));
+  await act(() => jest.runAllTimers());
+  expect(checked).toEqual(["2026-01", "2026-02"]);
+  expect([...first.result.current.keys()]).toEqual(["2026-01"]);
+  await first.unmount();
+
+  // Opened again with nothing changed: the answer is back at once, with no wait and no check.
+  const second = await renderHook(() => useSnapshotDrift({ ...history }, cache, 3000));
+  await act(() => jest.advanceTimersByTime(0));
+  expect(checked).toHaveLength(2);
+  expect([...second.result.current.keys()]).toEqual(["2026-01"]);
 });
