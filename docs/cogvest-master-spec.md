@@ -23,12 +23,40 @@ follow `docs/design/financial-label-format-contract.md`.
 
 ### Active Version
 
-V2 tracker #137 is complete with standalone verification recorded in
-`docs/testing/v2-closeout-evidence.md`. V3 tracker #138 now owns execution,
-starting with full-portfolio backup/restore #24. Settings provides manual
-backup export, optionally protected with a passphrase (#760), and replacement-only restore, with validation, a
-count preview, and explicit confirmation. Its compatibility and recovery contract is in
-`docs/roadmap/backup-restore-contract.md`.
+V1, V2 (#137, verified in `docs/testing/v2-closeout-evidence.md`) and V3
+(#138, closed 19 November 2026; re-check in
+`docs/testing/2026-11-20-v3-closeout-rerun.md`) are complete. The current phase
+is stabilization (#846): verification, real-shaped fixtures and release safety
+ahead of new features.
+
+Shipped after the V3 core, through preview 1.0.43:
+
+- Backup: optional passphrase protection (#760) and a last-backup reminder (#759).
+- Optional app lock (#761).
+- Target allocation and drift (#764).
+- Benchmark XIRR comparison (#765).
+- SIP templates confirmed each month (#766).
+- Savings goals (#767).
+- AMFI price history for mutual funds (#799).
+- Imports:
+  - EPFO passbook PDF import (#740);
+  - PPF CSV import (#748);
+  - share-to-import (#771).
+- Progress: stale-month review (#747, #751).
+- Fund and ETF sectors with a sector breakdown and international share (#823).
+- Interface work (#782–#787), including a masked home-screen widget (#786).
+
+Settings provides manual backup export and replacement-only restore. Restore
+includes validation, a count preview and an explicit confirmation. Its
+compatibility and recovery contract is in `docs/roadmap/backup-restore-contract.md`.
+
+Deferred or parked:
+
+- Font-size relaunch bugs #529 and #737.
+- USD→INR conversion #762.
+- Fixed deposits, NPS, gold and bonds #763.
+- Binance history #247, which waits for a sample export.
+- Application-layer encryption #218.
 Minimal Mode uses the same screens with a quieter default hierarchy (#507).
 Dashboard leads with value and allocation; invested amounts and returns expand
 on demand. Holdings rows keep identity, value and weight, with invested and P&L

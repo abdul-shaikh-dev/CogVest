@@ -6,6 +6,10 @@ Add advanced market, tax, backup, and polish features after V1/V2 validate the p
 
 ## Current Execution Direction
 
+Historical: V3 tracker #138 closed on 19 November 2026. The order below is kept
+as a record. Current priorities are in `AGENTS.md` and the stabilization
+tracker #846.
+
 V2 tracker #137 closed after standalone verification. On 10 September 2026 the
 owner prioritized full-portfolio backup/restore #24 ahead of the other V3 work.
 Issue #138 owns the updated order: backup/restore, search and cache foundations,
